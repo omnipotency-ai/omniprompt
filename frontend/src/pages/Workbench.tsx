@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   clarifyIntent,
   compilePrompt,
   createSession,
+  getLatestSession,
   listProjects,
+  reformulateIntent as reformulateIntentApi,
   routeModel,
   savePromptToLibrary,
   updateSession,
@@ -23,7 +25,9 @@ import type {
   CompiledVersion,
   ModelChoice,
   Project,
+  Session,
   RouteResponse,
+  SessionUpdateRequest,
   TaskType,
 } from "../types";
 import { getDefaultModelForTask, getModelLabel, getTaskLabel } from "../types";
@@ -63,6 +67,7 @@ const STAGE_TITLES: Record<WorkflowStageId, string> = {
 type WorkbenchPageProps = {
   refreshKey: number;
   onOpenProjects: () => void;
+  onSessionActive?: (title: string | null) => void;
 };
 
 // ── Helpers ──
@@ -74,6 +79,42 @@ function deriveSessionTitle(roughIntent: string, taskType: TaskType) {
     .replaceAll("_", " ")
     .replace(/\b\w/g, (v) => v.toUpperCase());
   return `${humanizedTask} session`;
+}
+
+function deriveLibraryTitle(roughIntent: string, taskType: TaskType): string {
+  const intent = roughIntent.trim().replace(/\s+/g, " ");
+  if (intent) {
+    const firstSentence = intent.split(/[.!?]/)[0].trim();
+    return firstSentence.slice(0, 80);
+  }
+  return getTaskLabel(taskType);
+}
+
+// TODO(Phase 4): This is a placeholder versioning scheme that WILL be replaced.
+// The correct model is documented in docs/phase4-design.md — a tree/branch scheme
+// where session_number is the major (e.g. 7) and the version path encodes branch
+// depth (7.01 → 7.02 → 7.021 → 7.0211). Data written with this scheme will need
+// migration when Phase 4 ships.
+function deriveVersionLabel(
+  compiledVersions: CompiledVersion[],
+  baseVersionLabel: string | null,
+): string {
+  if (!baseVersionLabel || compiledVersions.length === 0) {
+    // Fresh compile — integer bump
+    const majorCount = compiledVersions.filter((v) =>
+      /^\d+\.0$/.test(v.version_label),
+    ).length;
+    return `${majorCount + 1}.0`;
+  }
+  // Iteration — decimal bump off the base
+  const baseMajor = baseVersionLabel.split(".")[0];
+  const decimalVersions = compiledVersions.filter(
+    (v) =>
+      v.version_label.startsWith(`${baseMajor}.`) &&
+      v.version_label !== `${baseMajor}.0`,
+  );
+  const nextDecimal = decimalVersions.length + 1;
+  return `${baseMajor}.${String(nextDecimal).padStart(2, "0")}`;
 }
 
 function collectAnswers(
@@ -92,6 +133,7 @@ function collectAnswers(
 export function WorkbenchPage({
   refreshKey,
   onOpenProjects,
+  onSessionActive,
 }: WorkbenchPageProps) {
   // ── Projects ──
   const [projects, setProjects] = useState<Project[]>([]);
@@ -125,6 +167,13 @@ export function WorkbenchPage({
 
   // ── Session ──
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const autosaveInflight = useRef<boolean>(false);
+
+  // ── Draft restore ──
+  const [sessionToRestore, setSessionToRestore] = useState<Session | null>(
+    null,
+  );
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
 
   // ── Stage + busy ──
   const [currentStage, setCurrentStage] = useState<WorkflowStageId>("context");
@@ -171,6 +220,27 @@ export function WorkbenchPage({
       }
     }
     void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
+
+  // ── Check for restorable session on mount ──
+  useEffect(() => {
+    let cancelled = false;
+    async function checkForSession() {
+      try {
+        const session = await getLatestSession();
+        if (cancelled) return;
+        if (session && session.rough_intent) {
+          setSessionToRestore(session);
+          setShowRestoreBanner(true);
+        }
+      } catch {
+        // Non-blocking: if we can't check, just start fresh
+      }
+    }
+    void checkForSession();
     return () => {
       cancelled = true;
     };
@@ -264,26 +334,35 @@ export function WorkbenchPage({
   }
 
   // ── Autosave session at stage transitions ──
-  async function autosaveSession(overrides?: Record<string, unknown>) {
+  async function autosaveSession(overrides?: Partial<SessionUpdateRequest>) {
+    if (autosaveInflight.current) return;
+    autosaveInflight.current = true;
     try {
-      const payload = {
+      const sessionTitle = deriveSessionTitle(roughIntent, taskType);
+      const base = {
         project_id: selectedProjectId || undefined,
         task_type: taskType,
-        title: deriveSessionTitle(roughIntent, taskType),
+        title: sessionTitle,
         rough_intent: roughIntent.trim() || undefined,
-        selected_model: selectedModel,
         status: "open" as const,
-        ...overrides,
       };
 
       if (sessionId) {
+        const payload: SessionUpdateRequest = {
+          ...base,
+          selected_model: selectedModel,
+          ...overrides,
+        };
         await updateSession(sessionId, payload);
       } else {
-        const session = await createSession(payload);
+        const session = await createSession(base);
         setSessionId(session.id);
       }
-    } catch {
-      // Autosave failures are non-blocking
+      onSessionActive?.(sessionTitle);
+    } catch (err) {
+      console.warn("Autosave failed:", err);
+    } finally {
+      autosaveInflight.current = false;
     }
   }
 
@@ -312,14 +391,25 @@ export function WorkbenchPage({
     void autosaveSession();
   }
 
-  function handleIntentContinue() {
+  async function handleReformulateIntent(intentText: string): Promise<string> {
+    const result = await reformulateIntentApi({
+      task_type: taskType,
+      rough_intent: intentText,
+      ...(selectedProjectId && { project_id: selectedProjectId }),
+    });
+    void autosaveSession({ reformulated_intent: result.reformulated_intent });
+    return result.reformulated_intent;
+  }
+
+  function handleIntentContinue(skipAutosave?: boolean) {
     // Go to clarify: kick off clarification API call
+    if (!skipAutosave) void autosaveSession();
     goToStage("clarify");
-    setBusyAction("clarify");
     void handleClarifyRequest();
   }
 
   function handleIntentSkipToModel() {
+    void autosaveSession();
     goToStage("model");
     setBusyAction("route");
     void handleRouteRequest();
@@ -353,6 +443,7 @@ export function WorkbenchPage({
   }
 
   function handleClarifySkip() {
+    void autosaveSession();
     setCurrentClarifyResult(null);
     setAnswersByQuestionId({});
     goToStage("model");
@@ -400,7 +491,7 @@ export function WorkbenchPage({
     await handleCompileRequest();
   }
 
-  async function handleCompileRequest() {
+  async function handleCompileRequest(baseLabel?: string) {
     setBusyAction("compile");
     setErrorMessage(null);
     try {
@@ -417,16 +508,21 @@ export function WorkbenchPage({
 
       setLatestCompiledPrompt(response.compiled_prompt);
 
+      // Derive the label against the current snapshot of compiledVersions.
+      // This is safe because handleCompileRequest is never called concurrently.
+      const versionLabel = deriveVersionLabel(
+        compiledVersions,
+        baseLabel ?? null,
+      );
       const version: CompiledVersion = {
         id: crypto.randomUUID(),
-        version_label: `${compiledVersions.length + 1}.0`,
+        version_label: versionLabel,
         compiled_prompt: response.compiled_prompt,
         target_model: response.target_model,
         project_context_used: response.project_context_used,
         created_at: new Date().toISOString(),
       };
       setCompiledVersions((prev) => [...prev, version]);
-      setLibraryTitle(deriveSessionTitle(roughIntent, taskType));
 
       void autosaveSession({ append_compiled_version: version });
     } catch (err) {
@@ -439,6 +535,12 @@ export function WorkbenchPage({
   }
 
   function handleCompileContinue() {
+    void autosaveSession();
+    // Auto-populate library title from intent when first entering the save
+    // stage, but never overwrite text the user has already typed.
+    setLibraryTitle((prev) =>
+      prev.trim() ? prev : deriveLibraryTitle(roughIntent, taskType),
+    );
     goToStage("save");
   }
 
@@ -474,7 +576,7 @@ export function WorkbenchPage({
         }),
         effectiveness_rating: effectivenessRating,
       });
-      setSaveMessage("Prompt saved to the library.");
+      setSaveMessage("Saved to library.");
     } catch (err) {
       setErrorMessage(
         err instanceof Error ? err.message : "Failed to save the prompt.",
@@ -482,6 +584,54 @@ export function WorkbenchPage({
     } finally {
       setBusyAction(null);
     }
+  }
+
+  // ── Draft restore ──
+
+  function handleRestoreSession() {
+    if (!sessionToRestore) return;
+
+    const session = sessionToRestore;
+    const restoredTaskType: TaskType = session.task_type ?? "refactor";
+
+    setSessionId(session.id);
+    setSelectedProjectId(session.project_id ?? "");
+    setTaskType(restoredTaskType);
+    setRoughIntent(session.rough_intent ?? "");
+    // Coerce potentially-absent arrays once to avoid unsafe raw access below
+    const restoredRounds = session.clarify_rounds ?? [];
+    const restoredVersions = session.compiled_versions ?? [];
+
+    setClarifyRounds(restoredRounds);
+    setSelectedModel(
+      session.selected_model ?? getDefaultModelForTask(restoredTaskType),
+    );
+    setCompiledVersions(restoredVersions);
+
+    const lastVersion = restoredVersions[restoredVersions.length - 1];
+    setLatestCompiledPrompt(lastVersion?.compiled_prompt ?? "");
+
+    if (restoredVersions.length > 0) {
+      setCurrentStage("compile");
+    } else if (session.selected_model) {
+      setCurrentStage("model");
+    } else if (restoredRounds.length > 0) {
+      setCurrentStage("clarify");
+    } else if (session.rough_intent) {
+      setCurrentStage("intent");
+    }
+
+    onSessionActive?.(
+      session.title ??
+        deriveSessionTitle(session.rough_intent ?? "", restoredTaskType),
+    );
+    setShowRestoreBanner(false);
+    setSessionToRestore(null);
+  }
+
+  function handleDismissRestoreBanner() {
+    setShowRestoreBanner(false);
+    setSessionToRestore(null);
   }
 
   // ── No projects state ──
@@ -522,6 +672,48 @@ export function WorkbenchPage({
 
       {loadError && <p className="status-error">{loadError}</p>}
 
+      {showRestoreBanner && sessionToRestore && (
+        <div
+          className="flex items-start justify-between gap-4 rounded-lg border px-4 py-3"
+          style={{
+            background: "var(--bg-elevated)",
+            borderColor: "var(--border-default)",
+          }}
+        >
+          <div className="grid gap-1">
+            <p
+              className="text-sm font-medium"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Resume where you left off?
+            </p>
+            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              {sessionToRestore.title ??
+                deriveSessionTitle(
+                  sessionToRestore.rough_intent ?? "",
+                  sessionToRestore.task_type ?? "refactor",
+                )}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleRestoreSession}
+            >
+              Resume
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleDismissRestoreBanner}
+            >
+              Start fresh
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-3">
         {/* Context stage */}
         <WorkflowStage
@@ -558,7 +750,9 @@ export function WorkbenchPage({
             taskType={taskType}
             onIntentChange={setRoughIntent}
             onContinue={handleIntentContinue}
+            onContinueAfterReformulate={() => handleIntentContinue(true)}
             onSkipToModel={handleIntentSkipToModel}
+            reformulateIntent={handleReformulateIntent}
             disabled={busyAction !== null}
           />
         </WorkflowStage>
@@ -620,6 +814,7 @@ export function WorkbenchPage({
             onReviseIntent={() => goToStage("intent")}
             onChangeModel={() => goToStage("model")}
             onRegenerate={() => void handleCompileRequest()}
+            onIterateFrom={(label) => void handleCompileRequest(label)}
             onContinue={handleCompileContinue}
             loading={busyAction === "compile"}
             disabled={busyAction !== null}

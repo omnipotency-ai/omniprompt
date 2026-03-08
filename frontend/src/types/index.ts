@@ -133,6 +133,17 @@ export interface CompileResponse {
   project_context_used: boolean;
 }
 
+export interface ReformulateRequest {
+  task_type: TaskType;
+  rough_intent: string;
+  project_id?: string;
+}
+
+export interface ReformulateResponse {
+  original_intent: string;
+  reformulated_intent: string;
+}
+
 export interface Session {
   id: string;
   project_id: string | null;

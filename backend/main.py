@@ -29,6 +29,8 @@ try:
         Project,
         ProjectCreateRequest,
         ProjectMapResponse,
+        ReformulateRequest,
+        ReformulateResponse,
         RepoMap,
         RouteRequest,
         RouteResponse,
@@ -36,6 +38,7 @@ try:
         SessionCreateRequest,
         SessionUpdateRequest,
     )
+    from backend.reformulator import reformulate
     from backend.router import recommend_model
 except ModuleNotFoundError:
     from clarifier import generate_clarifying_questions
@@ -52,6 +55,8 @@ except ModuleNotFoundError:
         Project,
         ProjectCreateRequest,
         ProjectMapResponse,
+        ReformulateRequest,
+        ReformulateResponse,
         RepoMap,
         RouteRequest,
         RouteResponse,
@@ -59,6 +64,7 @@ except ModuleNotFoundError:
         SessionCreateRequest,
         SessionUpdateRequest,
     )
+    from reformulator import reformulate
     from router import recommend_model
 
 APP_DIR = Path(__file__).resolve().parent
@@ -234,11 +240,25 @@ def create_app() -> FastAPI:
     async def startup() -> None:
         ensure_storage()
 
+    @app.post("/api/reformulate", response_model=ReformulateResponse)
+    async def reformulate_intent(payload: ReformulateRequest) -> ReformulateResponse:
+        repo_map = _load_repo_map(project_registry, payload.project_id)
+        try:
+            return await asyncio.to_thread(
+                reformulate,
+                task_type=payload.task_type,
+                rough_intent=payload.rough_intent,
+                repo_map_summary=repo_map.summary if repo_map else None,
+            )
+        except RuntimeError as exc:
+            raise _to_ai_http_exception(exc) from exc
+
     @app.post("/api/clarify", response_model=ClarifyResponse)
     async def clarify_intent(payload: ClarifyRequest) -> ClarifyResponse:
         repo_map = _load_repo_map(project_registry, payload.project_id)
         try:
-            return generate_clarifying_questions(
+            return await asyncio.to_thread(
+                generate_clarifying_questions,
                 task_type=payload.task_type,
                 rough_intent=payload.rough_intent,
                 repo_map_summary=repo_map.summary if repo_map else None,
@@ -250,7 +270,8 @@ def create_app() -> FastAPI:
     async def compile_prompt(payload: CompileRequest) -> CompileResponse:
         repo_map = _load_repo_map(project_registry, payload.project_id)
         try:
-            return generate_compiled_prompt(
+            return await asyncio.to_thread(
+                generate_compiled_prompt,
                 task_type=payload.task_type,
                 rough_intent=payload.rough_intent,
                 answers=payload.answers,
@@ -264,7 +285,8 @@ def create_app() -> FastAPI:
     async def route_prompt(payload: RouteRequest) -> RouteResponse:
         repo_map = _load_repo_map(project_registry, payload.project_id)
         try:
-            return recommend_model(
+            return await asyncio.to_thread(
+                recommend_model,
                 task_type=payload.task_type,
                 rough_intent=payload.rough_intent,
                 answers=payload.answers,
@@ -310,6 +332,7 @@ def create_app() -> FastAPI:
 
     @app.post("/api/projects/{project_id}/map", response_model=ProjectMapResponse)
     async def generate_project_map(project_id: str) -> ProjectMapResponse:
+        _validate_uuid(project_id, "project_id")
         project = project_registry.get(project_id)
         if project is None:
             raise HTTPException(
@@ -382,6 +405,7 @@ def create_app() -> FastAPI:
 
     @app.get("/api/sessions/{session_id}", response_model=Session)
     async def get_session(session_id: str) -> Session:
+        _validate_uuid(session_id, "session_id")
         session = session_store.get(session_id)
         if session is None:
             raise HTTPException(
@@ -417,6 +441,7 @@ def create_app() -> FastAPI:
 
     @app.put("/api/sessions/{session_id}", response_model=Session)
     async def update_session(session_id: str, payload: SessionUpdateRequest) -> Session:
+        _validate_uuid(session_id, "session_id")
         existing_session = session_store.get(session_id)
         if existing_session is None:
             raise HTTPException(
@@ -514,12 +539,12 @@ def _resolve_directory(raw_path: str) -> Path:
     if not candidate.exists():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Project path '{candidate.as_posix()}' does not exist.",
+            detail="Project directory does not exist.",
         )
     if not candidate.is_dir():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Project path '{candidate.as_posix()}' is not a directory.",
+            detail="Project path is not a directory.",
         )
     return candidate
 
@@ -551,7 +576,7 @@ def _load_repo_map(
     except JSONDecodeError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Repo map '{repo_map_path.as_posix()}' is not valid JSON.",
+            detail="Cannot read project files: repo map is not valid JSON.",
         ) from exc
 
     try:
@@ -559,8 +584,16 @@ def _load_repo_map(
     except ValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Repo map '{repo_map_path.as_posix()}' is invalid.",
+            detail="Cannot read project files: repo map data is invalid.",
         ) from exc
+
+
+def _validate_uuid(value: str, field_name: str) -> str:
+    try:
+        uuid.UUID(value)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid {field_name}")
+    return value
 
 
 def _to_ai_http_exception(exc: RuntimeError) -> HTTPException:

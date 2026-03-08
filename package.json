@@ -8,6 +8,7 @@
     "fe": "cd frontend && bun run dev",
     "backend": "backend/.venv/bin/uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000",
     "be": "backend/.venv/bin/uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000",
-    "build": "cd frontend && bun run build"
+    "build": "cd frontend && bun run build",
+    "e2e": "cd frontend && bun run e2e"
   }
 }
