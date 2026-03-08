@@ -83,7 +83,6 @@ class ProjectRegistry:
         try:
             raw_payload = json.loads(self._registry_path.read_text(encoding="utf-8"))
         except FileNotFoundError:
-            self._on_read()
             raw_payload = []
         except JSONDecodeError as exc:
             raise RuntimeError(
@@ -483,7 +482,7 @@ def ensure_storage() -> None:
         PROJECTS_FILE.write_text("[]\n", encoding="utf-8")
 
 
-def _read_model_file(path: Path, model_type: type[Project] | type[Prompt] | type[Session] | type[RepoMap]):
+def _read_model_file(path: Path, model_type: type[Project] | type[Prompt] | type[Session] | type[RepoMap]) -> Project | Prompt | Session | RepoMap:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except JSONDecodeError as exc:

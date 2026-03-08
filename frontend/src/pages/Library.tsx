@@ -111,19 +111,31 @@ export function LibraryPage() {
         <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[24rem]">
           <div className="panel-subtle">
             <p className="field-label">Saved</p>
-            <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-ink-900">
+            <p
+              className="mt-3 text-3xl font-semibold tracking-[-0.04em]"
+              style={{ color: "var(--text-primary)" }}
+            >
               {prompts.length}
             </p>
-            <p className="mt-1 text-sm leading-6 text-ink-700">
+            <p
+              className="mt-1 text-sm leading-6"
+              style={{ color: "var(--text-secondary)" }}
+            >
               Prompt artifacts in the library.
             </p>
           </div>
           <div className="panel-subtle">
             <p className="field-label">Rated</p>
-            <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-ink-900">
+            <p
+              className="mt-3 text-3xl font-semibold tracking-[-0.04em]"
+              style={{ color: "var(--text-primary)" }}
+            >
               {ratedCount}
             </p>
-            <p className="mt-1 text-sm leading-6 text-ink-700">
+            <p
+              className="mt-1 text-sm leading-6"
+              style={{ color: "var(--text-secondary)" }}
+            >
               Entries with effectiveness feedback.
             </p>
           </div>
@@ -144,10 +156,16 @@ export function LibraryPage() {
 
           <div className="panel-subtle grid gap-1 xl:min-w-[16rem]">
             <span className="field-label">Results</span>
-            <strong className="text-2xl font-semibold tracking-[-0.04em] text-ink-900">
+            <strong
+              className="text-2xl font-semibold tracking-[-0.04em]"
+              style={{ color: "var(--text-primary)" }}
+            >
               {loading ? "..." : filteredPrompts.length}
             </strong>
-            <span className="text-sm leading-6 text-ink-700">
+            <span
+              className="text-sm leading-6"
+              style={{ color: "var(--text-secondary)" }}
+            >
               Matching prompt entries.
             </span>
           </div>
@@ -158,13 +176,19 @@ export function LibraryPage() {
 
       {loading ? (
         <section className="panel p-6">
-          <p className="text-sm leading-6 text-ink-700">
+          <p
+            className="text-sm leading-6"
+            style={{ color: "var(--text-secondary)" }}
+          >
             Loading saved prompts...
           </p>
         </section>
       ) : filteredPrompts.length === 0 ? (
         <section className="panel p-6">
-          <p className="text-sm leading-6 text-ink-700">
+          <p
+            className="text-sm leading-6"
+            style={{ color: "var(--text-secondary)" }}
+          >
             No saved prompts yet. Compile one in the workbench and save it with
             a rating and a why-it-worked note.
           </p>
@@ -179,7 +203,10 @@ export function LibraryPage() {
               <div className="grid gap-5">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                   <div className="grid gap-3">
-                    <h3 className="text-[1.35rem] font-semibold leading-tight tracking-[-0.03em] text-ink-900">
+                    <h3
+                      className="text-[1.35rem] font-semibold leading-tight tracking-[-0.03em]"
+                      style={{ color: "var(--text-primary)" }}
+                    >
                       {prompt.title || prompt.rough_intent}
                     </h3>
                     <div className="flex flex-wrap gap-2">
@@ -194,7 +221,7 @@ export function LibraryPage() {
                       </span>
                       {prompt.effectiveness_rating ? (
                         <span className="badge badge-success">
-                          {prompt.effectiveness_rating}/5
+                          {prompt.effectiveness_rating}/7
                         </span>
                       ) : null}
                     </div>
@@ -212,19 +239,28 @@ export function LibraryPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="panel-subtle grid gap-2">
                     <p className="field-label">Rough intent</p>
-                    <p className="text-sm leading-6 text-ink-900">
+                    <p
+                      className="text-sm leading-6"
+                      style={{ color: "var(--text-primary)" }}
+                    >
                       {prompt.rough_intent}
                     </p>
                   </div>
                   <div className="panel-subtle grid gap-2">
                     <p className="field-label">Expected result</p>
-                    <p className="text-sm leading-6 text-ink-900">
+                    <p
+                      className="text-sm leading-6"
+                      style={{ color: "var(--text-primary)" }}
+                    >
                       {prompt.expected_result_assessment ?? "No assessment"}
                     </p>
                   </div>
                 </div>
 
-                <p className="text-xs uppercase tracking-[0.16em] text-ink-700">
+                <p
+                  className="text-xs uppercase tracking-[0.16em]"
+                  style={{ color: "var(--text-secondary)" }}
+                >
                   Saved {new Date(prompt.created_at).toLocaleString()}
                 </p>
               </div>

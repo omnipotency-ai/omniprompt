@@ -53,6 +53,7 @@ export function WorkflowStage({
       {/* Header row */}
       <button
         type="button"
+        id={`workflow-stage-${stageNumber}-header`}
         onClick={canToggle ? onToggle : undefined}
         disabled={!canToggle}
         aria-expanded={isExpanded}

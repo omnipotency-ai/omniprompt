@@ -32,7 +32,9 @@ export function ProjectsPage({
       const nextProjects = await listProjects();
       setProjects(nextProjects);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to load projects.");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to load projects.",
+      );
     } finally {
       setLoading(false);
     }
@@ -59,7 +61,9 @@ export function ProjectsPage({
       await loadProjects();
       onProjectsMutated();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to create project.");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to create project.",
+      );
     } finally {
       setBusyProjectId(null);
     }
@@ -89,25 +93,41 @@ export function ProjectsPage({
           <p className="eyebrow">Projects</p>
           <h2 className="page-title">Register repos and keep context fresh</h2>
           <p className="page-description">
-            The workbench gets materially better once it can inspect a real repo map
-            instead of generating prompts from memory and rough guesses.
+            The workbench gets materially better once it can inspect a real repo
+            map instead of generating prompts from memory and rough guesses.
           </p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[24rem]">
           <div className="panel-subtle">
             <p className="field-label">Connected</p>
-            <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-ink-900">
+            <p
+              className="mt-3 text-3xl font-semibold tracking-[-0.04em]"
+              style={{ color: "var(--text-primary)" }}
+            >
               {projects.length}
             </p>
-            <p className="mt-1 text-sm leading-6 text-ink-700">Projects available to the compiler.</p>
+            <p
+              className="mt-1 text-sm leading-6"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Projects available to the compiler.
+            </p>
           </div>
           <div className="panel-subtle">
             <p className="field-label">Mapped</p>
-            <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-ink-900">
+            <p
+              className="mt-3 text-3xl font-semibold tracking-[-0.04em]"
+              style={{ color: "var(--text-primary)" }}
+            >
               {mappedCount}
             </p>
-            <p className="mt-1 text-sm leading-6 text-ink-700">Projects with repo-map context ready.</p>
+            <p
+              className="mt-1 text-sm leading-6"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Projects with repo-map context ready.
+            </p>
           </div>
         </div>
       </div>
@@ -117,8 +137,8 @@ export function ProjectsPage({
           <div className="grid gap-2">
             <p className="field-label">Register a repo</p>
             <p className="section-copy content-clamp">
-              Add the local path once, then refresh the repo map when the source tree
-              changes enough to matter for prompt generation.
+              Add the local path once, then refresh the repo map when the source
+              tree changes enough to matter for prompt generation.
             </p>
           </div>
 
@@ -143,10 +163,20 @@ export function ProjectsPage({
           </label>
 
           <div className="flex flex-wrap gap-3">
-            <button type="submit" className="btn btn-primary" disabled={busyProjectId === "create"}>
-              {busyProjectId === "create" ? "Registering..." : "Register project"}
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={busyProjectId === "create"}
+            >
+              {busyProjectId === "create"
+                ? "Registering..."
+                : "Register project"}
             </button>
-            <button type="button" className="btn btn-secondary" onClick={onBackToWorkbench}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={onBackToWorkbench}
+            >
               Back to workbench
             </button>
           </div>
@@ -156,14 +186,22 @@ export function ProjectsPage({
 
         <div className="panel-subtle grid gap-3">
           <p className="field-label">Why repo maps matter</p>
-          <p className="text-sm leading-6 text-ink-700">
-            Better repo context improves clarifying questions, model routing, and the
-            final prompt structure.
+          <p
+            className="text-sm leading-6"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            Better repo context improves clarifying questions, model routing,
+            and the final prompt structure.
           </p>
-          <ul className="grid gap-2 text-sm leading-6 text-ink-700">
+          <ul
+            className="grid gap-2 text-sm leading-6"
+            style={{ color: "var(--text-secondary)" }}
+          >
             <li>Reduces guesswork about where the relevant code lives.</li>
             <li>Lets prompt output reference the right files and modules.</li>
-            <li>Keeps audits and refactors grounded in the real project shape.</li>
+            <li>
+              Keeps audits and refactors grounded in the real project shape.
+            </li>
           </ul>
         </div>
       </section>
@@ -173,7 +211,8 @@ export function ProjectsPage({
           <div className="grid gap-1">
             <h3 className="section-title text-[1.3rem]">Connected projects</h3>
             <p className="section-copy">
-              Refresh maps whenever structural changes would alter prompt guidance.
+              Refresh maps whenever structural changes would alter prompt
+              guidance.
             </p>
           </div>
 
@@ -188,30 +227,54 @@ export function ProjectsPage({
         </div>
 
         {projects.length === 0 && !loading ? (
-          <p className="text-sm leading-6 text-ink-700">No projects yet.</p>
+          <p
+            className="text-sm leading-6"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            No projects yet.
+          </p>
         ) : (
           <div className="grid gap-4">
             {projects.map((project) => (
               <article
                 key={project.id}
-                className="grid gap-4 rounded-[1.15rem] border border-black/10 bg-sand-50/82 px-5 py-5 xl:grid-cols-[minmax(0,1fr)_auto]"
+                className="grid gap-4 rounded-[1.15rem] px-5 py-5 xl:grid-cols-[minmax(0,1fr)_auto]"
+                style={{
+                  border: "1px solid var(--border-default)",
+                  background: "var(--bg-elevated)",
+                }}
               >
                 <div className="grid gap-4">
                   <div className="flex flex-wrap items-center gap-3">
-                    <h4 className="text-lg font-semibold text-ink-900">{project.name}</h4>
-                    <span className={`badge ${project.repo_map_path ? "badge-success" : "badge-accent"}`}>
+                    <h4
+                      className="text-lg font-semibold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {project.name}
+                    </h4>
+                    <span
+                      className={`badge ${project.repo_map_path ? "badge-success" : "badge-accent"}`}
+                    >
                       {project.repo_map_path ? "Mapped" : "Needs map"}
                     </span>
                   </div>
 
-                  <div className="grid gap-3 text-sm leading-6 text-ink-700 md:grid-cols-2">
+                  <div
+                    className="grid gap-3 text-sm leading-6 md:grid-cols-2"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
                     <div className="grid gap-1">
                       <span className="field-label">Path</span>
-                      <p className="break-all text-ink-900">{project.path}</p>
+                      <p
+                        className="break-all"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {project.path}
+                      </p>
                     </div>
                     <div className="grid gap-1">
                       <span className="field-label">Last mapped</span>
-                      <p className="text-ink-900">
+                      <p style={{ color: "var(--text-primary)" }}>
                         {project.last_mapped_at
                           ? new Date(project.last_mapped_at).toLocaleString()
                           : "Never"}
