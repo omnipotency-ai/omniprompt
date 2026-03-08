@@ -71,6 +71,10 @@ async function request<T>(path: string, init?: ApiRequestInit): Promise<T> {
     throw new ApiError(response.status, message);
   }
 
+  // Unchecked cast: we trust the backend to return the correct shape for T.
+  // If the API contract changes without updating frontend types, errors will
+  // surface at call sites. A runtime schema validator (e.g. zod) would catch
+  // this earlier but adds significant complexity not warranted for a local tool.
   return payload as T;
 }
 
