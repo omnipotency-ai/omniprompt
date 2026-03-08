@@ -49,8 +49,10 @@ function mockCommonRoutes(
             id: "proj-1",
             name: "_prompt_os",
             path: "/path",
-            description: null,
+            repo_map_path: null,
             created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            last_mapped_at: null,
           },
         ]),
       }),
@@ -119,5 +121,19 @@ test("resume button restores session and advances to intent stage", async ({
   // The intent stage content area should be visible.
   await expect(page.getByText("What do you need done?")).toBeVisible();
   // Banner should be gone after resuming
+  await expect(page.getByText("Resume where you left off?")).not.toBeVisible();
+});
+
+test("resume button restores session with selected_model and advances to model stage", async ({
+  page,
+}) => {
+  await mockCommonRoutes(page, mockSessionWithModel);
+  await page.goto("/");
+  await expect(page.getByText("Resume where you left off?")).toBeVisible();
+  await page.getByRole("button", { name: "Resume" }).click();
+  // Session has selected_model so handleRestoreSession should advance to "model" stage.
+  // The model stage label should be visible.
+  await expect(page.getByText("Choose a model")).toBeVisible();
+  // Banner should be gone
   await expect(page.getByText("Resume where you left off?")).not.toBeVisible();
 });
