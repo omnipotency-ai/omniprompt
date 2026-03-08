@@ -30,6 +30,9 @@ const NAV: NavItem[] = [
 export default function App() {
   const [activePage, setActivePage] = useState<PageId>("workbench");
   const [projectsVersion, setProjectsVersion] = useState(0);
+  const [activeSessionTitle, setActiveSessionTitle] = useState<string | null>(
+    null,
+  );
 
   return (
     <div className="min-h-screen">
@@ -99,7 +102,7 @@ export default function App() {
           </nav>
 
           {/* Draft / session placeholder (collapsible) */}
-          <SessionSection />
+          <SessionSection activeSessionTitle={activeSessionTitle} />
         </aside>
 
         {/* ── Main content ── */}
@@ -108,6 +111,7 @@ export default function App() {
             <WorkbenchPage
               refreshKey={projectsVersion}
               onOpenProjects={() => setActivePage("projects")}
+              onSessionActive={setActiveSessionTitle}
             />
           ) : activePage === "library" ? (
             <LibraryPage />
@@ -125,8 +129,17 @@ export default function App() {
   );
 }
 
-function SessionSection() {
+interface SessionSectionProps {
+  activeSessionTitle: string | null;
+}
+
+function SessionSection({ activeSessionTitle }: SessionSectionProps) {
   const [open, setOpen] = useState(true);
+
+  const displayTitle =
+    activeSessionTitle && activeSessionTitle.length > 40
+      ? `${activeSessionTitle.slice(0, 40)}…`
+      : activeSessionTitle;
 
   return (
     <div className="grid gap-1">
@@ -148,7 +161,7 @@ function SessionSection() {
       </button>
       {open && (
         <p className="pl-5 text-sm" style={{ color: "var(--text-muted)" }}>
-          No active session
+          {displayTitle ?? "No active session"}
         </p>
       )}
     </div>

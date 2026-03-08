@@ -4,6 +4,7 @@ import {
   clarifyIntent,
   compilePrompt,
   createSession,
+  getLatestSession,
   listProjects,
   reformulateIntent as reformulateIntentApi,
   routeModel,
@@ -24,6 +25,7 @@ import type {
   CompiledVersion,
   ModelChoice,
   Project,
+  Session,
   RouteResponse,
   TaskType,
 } from "../types";
@@ -64,6 +66,7 @@ const STAGE_TITLES: Record<WorkflowStageId, string> = {
 type WorkbenchPageProps = {
   refreshKey: number;
   onOpenProjects: () => void;
+  onSessionActive?: (title: string | null) => void;
 };
 
 // ── Helpers ──
@@ -93,6 +96,7 @@ function collectAnswers(
 export function WorkbenchPage({
   refreshKey,
   onOpenProjects,
+  onSessionActive,
 }: WorkbenchPageProps) {
   // ── Projects ──
   const [projects, setProjects] = useState<Project[]>([]);
@@ -126,6 +130,12 @@ export function WorkbenchPage({
 
   // ── Session ──
   const [sessionId, setSessionId] = useState<string | null>(null);
+
+  // ── Draft restore ──
+  const [sessionToRestore, setSessionToRestore] = useState<Session | null>(
+    null,
+  );
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
 
   // ── Stage + busy ──
   const [currentStage, setCurrentStage] = useState<WorkflowStageId>("context");
@@ -172,6 +182,27 @@ export function WorkbenchPage({
       }
     }
     void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
+
+  // ── Check for restorable session on mount ──
+  useEffect(() => {
+    let cancelled = false;
+    async function checkForSession() {
+      try {
+        const session = await getLatestSession();
+        if (cancelled) return;
+        if (session && session.rough_intent) {
+          setSessionToRestore(session);
+          setShowRestoreBanner(true);
+        }
+      } catch {
+        // Non-blocking: if we can't check, just start fresh
+      }
+    }
+    void checkForSession();
     return () => {
       cancelled = true;
     };
@@ -267,10 +298,11 @@ export function WorkbenchPage({
   // ── Autosave session at stage transitions ──
   async function autosaveSession(overrides?: Record<string, unknown>) {
     try {
+      const sessionTitle = deriveSessionTitle(roughIntent, taskType);
       const payload = {
         project_id: selectedProjectId || undefined,
         task_type: taskType,
-        title: deriveSessionTitle(roughIntent, taskType),
+        title: sessionTitle,
         rough_intent: roughIntent.trim() || undefined,
         selected_model: selectedModel,
         status: "open" as const,
@@ -283,6 +315,7 @@ export function WorkbenchPage({
         const session = await createSession(payload);
         setSessionId(session.id);
       }
+      onSessionActive?.(sessionTitle);
     } catch {
       // Autosave failures are non-blocking
     }
@@ -325,12 +358,14 @@ export function WorkbenchPage({
 
   function handleIntentContinue() {
     // Go to clarify: kick off clarification API call
+    void autosaveSession();
     goToStage("clarify");
     setBusyAction("clarify");
     void handleClarifyRequest();
   }
 
   function handleIntentSkipToModel() {
+    void autosaveSession();
     goToStage("model");
     setBusyAction("route");
     void handleRouteRequest();
@@ -364,6 +399,7 @@ export function WorkbenchPage({
   }
 
   function handleClarifySkip() {
+    void autosaveSession();
     setCurrentClarifyResult(null);
     setAnswersByQuestionId({});
     goToStage("model");
@@ -450,6 +486,7 @@ export function WorkbenchPage({
   }
 
   function handleCompileContinue() {
+    void autosaveSession();
     goToStage("save");
   }
 
@@ -495,6 +532,51 @@ export function WorkbenchPage({
     }
   }
 
+  // ── Draft restore ──
+
+  function handleRestoreSession() {
+    if (!sessionToRestore) return;
+
+    const session = sessionToRestore;
+    const restoredTaskType: TaskType = session.task_type ?? "refactor";
+
+    setSessionId(session.id);
+    setSelectedProjectId(session.project_id ?? "");
+    setTaskType(restoredTaskType);
+    setRoughIntent(session.rough_intent ?? "");
+    setClarifyRounds(session.clarify_rounds ?? []);
+    setSelectedModel(
+      session.selected_model ?? getDefaultModelForTask(restoredTaskType),
+    );
+    setCompiledVersions(session.compiled_versions ?? []);
+
+    const lastVersion =
+      session.compiled_versions[session.compiled_versions.length - 1];
+    setLatestCompiledPrompt(lastVersion?.compiled_prompt ?? "");
+
+    if (session.compiled_versions.length > 0) {
+      setCurrentStage("compile");
+    } else if (session.selected_model && session.clarify_rounds.length > 0) {
+      setCurrentStage("model");
+    } else if (session.clarify_rounds.length > 0) {
+      setCurrentStage("clarify");
+    } else if (session.rough_intent) {
+      setCurrentStage("intent");
+    }
+
+    onSessionActive?.(
+      session.title ??
+        deriveSessionTitle(session.rough_intent ?? "", restoredTaskType),
+    );
+    setShowRestoreBanner(false);
+    setSessionToRestore(null);
+  }
+
+  function handleDismissRestoreBanner() {
+    setShowRestoreBanner(false);
+    setSessionToRestore(null);
+  }
+
   // ── No projects state ──
   if (!loadingProjects && projects.length === 0) {
     return (
@@ -532,6 +614,48 @@ export function WorkbenchPage({
       <PageHeader />
 
       {loadError && <p className="status-error">{loadError}</p>}
+
+      {showRestoreBanner && sessionToRestore && (
+        <div
+          className="flex items-start justify-between gap-4 rounded-lg border px-4 py-3"
+          style={{
+            background: "var(--bg-elevated)",
+            borderColor: "var(--border-default)",
+          }}
+        >
+          <div className="grid gap-1">
+            <p
+              className="text-sm font-medium"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Resume where you left off?
+            </p>
+            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              {sessionToRestore.title ??
+                deriveSessionTitle(
+                  sessionToRestore.rough_intent ?? "",
+                  sessionToRestore.task_type ?? "refactor",
+                )}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleRestoreSession}
+            >
+              Resume
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleDismissRestoreBanner}
+            >
+              Start fresh
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-3">
         {/* Context stage */}
