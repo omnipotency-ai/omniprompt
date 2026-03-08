@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { listLibrary, listProjects } from "../api/client";
-import { getModelLabel, getTaskLabel, type Prompt, type Project } from "../types";
+import {
+  getModelLabel,
+  getTaskLabel,
+  type Prompt,
+  type Project,
+} from "../types";
 
 export function LibraryPage() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -29,7 +34,9 @@ export function LibraryPage() {
         setProjects(projectItems);
       } catch (error) {
         if (!cancelled) {
-          setErrorMessage(error instanceof Error ? error.message : "Failed to load library.");
+          setErrorMessage(
+            error instanceof Error ? error.message : "Failed to load library.",
+          );
         }
       } finally {
         if (!cancelled) {
@@ -55,7 +62,7 @@ export function LibraryPage() {
       [
         prompt.title,
         prompt.rough_intent,
-        prompt.why_it_works,
+        prompt.expected_result_assessment,
         prompt.task_type,
         prompt.target_model,
       ]
@@ -65,12 +72,16 @@ export function LibraryPage() {
   }, [prompts, query]);
 
   const ratedCount = useMemo(
-    () => prompts.filter((prompt) => prompt.effectiveness_rating !== null).length,
+    () =>
+      prompts.filter((prompt) => prompt.effectiveness_rating !== null).length,
     [prompts],
   );
 
   function getProjectName(projectId: string) {
-    return projects.find((project) => project.id === projectId)?.name ?? "Unknown project";
+    return (
+      projects.find((project) => project.id === projectId)?.name ??
+      "Unknown project"
+    );
   }
 
   async function handleCopy(prompt: Prompt) {
@@ -78,7 +89,9 @@ export function LibraryPage() {
       await navigator.clipboard.writeText(prompt.compiled_prompt);
       setCopiedPromptId(prompt.id);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to copy the prompt.");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to copy the prompt.",
+      );
     }
   }
 
@@ -89,8 +102,9 @@ export function LibraryPage() {
           <p className="eyebrow">Library</p>
           <h2 className="page-title">Keep the prompts worth repeating</h2>
           <p className="page-description">
-            Browse saved prompts, why-notes, and model-task pairings so the library
-            becomes an operating memory instead of a clipboard graveyard.
+            Browse saved prompts, why-notes, and model-task pairings so the
+            library becomes an operating memory instead of a clipboard
+            graveyard.
           </p>
         </div>
 
@@ -100,14 +114,18 @@ export function LibraryPage() {
             <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-ink-900">
               {prompts.length}
             </p>
-            <p className="mt-1 text-sm leading-6 text-ink-700">Prompt artifacts in the library.</p>
+            <p className="mt-1 text-sm leading-6 text-ink-700">
+              Prompt artifacts in the library.
+            </p>
           </div>
           <div className="panel-subtle">
             <p className="field-label">Rated</p>
             <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-ink-900">
               {ratedCount}
             </p>
-            <p className="mt-1 text-sm leading-6 text-ink-700">Entries with effectiveness feedback.</p>
+            <p className="mt-1 text-sm leading-6 text-ink-700">
+              Entries with effectiveness feedback.
+            </p>
           </div>
         </div>
       </div>
@@ -140,13 +158,15 @@ export function LibraryPage() {
 
       {loading ? (
         <section className="panel p-6">
-          <p className="text-sm leading-6 text-ink-700">Loading saved prompts...</p>
+          <p className="text-sm leading-6 text-ink-700">
+            Loading saved prompts...
+          </p>
         </section>
       ) : filteredPrompts.length === 0 ? (
         <section className="panel p-6">
           <p className="text-sm leading-6 text-ink-700">
-            No saved prompts yet. Compile one in the workbench and save it with a
-            rating and a why-it-worked note.
+            No saved prompts yet. Compile one in the workbench and save it with
+            a rating and a why-it-worked note.
           </p>
         </section>
       ) : (
@@ -192,11 +212,15 @@ export function LibraryPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="panel-subtle grid gap-2">
                     <p className="field-label">Rough intent</p>
-                    <p className="text-sm leading-6 text-ink-900">{prompt.rough_intent}</p>
+                    <p className="text-sm leading-6 text-ink-900">
+                      {prompt.rough_intent}
+                    </p>
                   </div>
                   <div className="panel-subtle grid gap-2">
-                    <p className="field-label">Why this worked</p>
-                    <p className="text-sm leading-6 text-ink-900">{prompt.why_it_works}</p>
+                    <p className="field-label">Expected result</p>
+                    <p className="text-sm leading-6 text-ink-900">
+                      {prompt.expected_result_assessment ?? "No assessment"}
+                    </p>
                   </div>
                 </div>
 
