@@ -11,6 +11,7 @@ interface CompileStageProps {
   onReviseIntent: () => void;
   onChangeModel: () => void;
   onRegenerate: () => void;
+  onIterateFrom: (versionLabel: string) => void;
   onContinue: () => void;
   loading?: boolean;
   disabled?: boolean;
@@ -24,6 +25,7 @@ export function CompileStage({
   onReviseIntent,
   onChangeModel,
   onRegenerate,
+  onIterateFrom,
   onContinue,
   loading,
   disabled,
@@ -118,19 +120,30 @@ export function CompileStage({
               {versions.map((v) => (
                 <div
                   key={v.id}
-                  className="rounded-lg px-3 py-2 text-sm"
+                  className="flex items-center justify-between rounded-lg px-3 py-2 text-sm"
                   style={{
                     background: "var(--bg-subtle)",
                     border: "1px solid var(--border-default)",
                   }}
                 >
-                  <span style={{ color: "var(--text-primary)" }}>
-                    {v.version_label}
+                  <span>
+                    <span style={{ color: "var(--text-primary)" }}>
+                      {v.version_label}
+                    </span>
+                    <span style={{ color: "var(--text-muted)" }}>
+                      {" "}
+                      — {getModelLabel(v.target_model)}
+                    </span>
                   </span>
-                  <span style={{ color: "var(--text-muted)" }}>
-                    {" "}
-                    -- {getModelLabel(v.target_model)}
-                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-muted"
+                    style={{ fontSize: "0.78rem", padding: "0.2rem 0.6rem" }}
+                    onClick={() => onIterateFrom(v.version_label)}
+                    disabled={disabled || loading}
+                  >
+                    Iterate from this
+                  </button>
                 </div>
               ))}
             </div>

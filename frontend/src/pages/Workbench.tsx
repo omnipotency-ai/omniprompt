@@ -483,9 +483,12 @@ export function WorkbenchPage({
     await handleCompileRequest();
   }
 
-  async function handleCompileRequest() {
+  async function handleCompileRequest(baseLabel?: string) {
     setBusyAction("compile");
     setErrorMessage(null);
+    // Accept an explicit baseLabel (passed directly to avoid stale state from
+    // setIterateFromVersionLabel not flushing before the call).
+    const effectiveBase = baseLabel ?? iterateFromVersionLabel;
     try {
       const allRoundAnswers = clarifyRounds.flatMap((r) => r.answers);
       const combined = [...allRoundAnswers, ...allAnswers];
@@ -502,10 +505,7 @@ export function WorkbenchPage({
 
       // Derive the label against the current snapshot of compiledVersions.
       // This is safe because handleCompileRequest is never called concurrently.
-      const versionLabel = deriveVersionLabel(
-        compiledVersions,
-        iterateFromVersionLabel,
-      );
+      const versionLabel = deriveVersionLabel(compiledVersions, effectiveBase);
       const version: CompiledVersion = {
         id: crypto.randomUUID(),
         version_label: versionLabel,
@@ -806,6 +806,7 @@ export function WorkbenchPage({
             onReviseIntent={() => goToStage("intent")}
             onChangeModel={() => goToStage("model")}
             onRegenerate={() => void handleCompileRequest()}
+            onIterateFrom={(label) => void handleCompileRequest(label)}
             onContinue={handleCompileContinue}
             loading={busyAction === "compile"}
             disabled={busyAction !== null}
