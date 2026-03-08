@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from fastapi import status
 
 from backend.main import _to_ai_http_exception
