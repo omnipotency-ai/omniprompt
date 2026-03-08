@@ -71,14 +71,21 @@ function mockCommonRoutes(
         body: JSON.stringify(sessionForLatest),
       }),
     ),
-    // Session list and create
-    page.route(`${API}/api/sessions`, (route) =>
-      route.fulfill({
+    // Session list (GET) and create (POST) — dispatch by method
+    page.route(`${API}/api/sessions`, (route) => {
+      if (route.request().method() === "POST") {
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ ...sessionForLatest, id: "sess-new" }),
+        });
+      }
+      return route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify([sessionForLatest]),
-      }),
-    ),
+      });
+    }),
   ]);
 }
 
