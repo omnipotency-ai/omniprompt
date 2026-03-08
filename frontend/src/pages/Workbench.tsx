@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   clarifyIntent,
@@ -27,6 +27,7 @@ import type {
   Project,
   Session,
   RouteResponse,
+  SessionUpdateRequest,
   TaskType,
 } from "../types";
 import { getDefaultModelForTask, getModelLabel, getTaskLabel } from "../types";
@@ -89,6 +90,11 @@ function deriveLibraryTitle(roughIntent: string, taskType: TaskType): string {
   return getTaskLabel(taskType);
 }
 
+// TODO(Phase 4): This is a placeholder versioning scheme that WILL be replaced.
+// The correct model is documented in docs/phase4-design.md — a tree/branch scheme
+// where session_number is the major (e.g. 7) and the version path encodes branch
+// depth (7.01 → 7.02 → 7.021 → 7.0211). Data written with this scheme will need
+// migration when Phase 4 ships.
 function deriveVersionLabel(
   compiledVersions: CompiledVersion[],
   baseVersionLabel: string | null,
@@ -152,10 +158,6 @@ export function WorkbenchPage({
     [],
   );
   const [latestCompiledPrompt, setLatestCompiledPrompt] = useState("");
-  // null = fresh compile; string = label of the version being iterated from
-  const [iterateFromVersionLabel, setIterateFromVersionLabel] = useState<
-    string | null
-  >(null);
 
   // ── Save fields ──
   const [libraryTitle, setLibraryTitle] = useState("");
@@ -165,6 +167,7 @@ export function WorkbenchPage({
 
   // ── Session ──
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const autosaveInflight = useRef<boolean>(false);
 
   // ── Draft restore ──
   const [sessionToRestore, setSessionToRestore] = useState<Session | null>(
@@ -305,7 +308,6 @@ export function WorkbenchPage({
         case "compile":
           setCompiledVersions([]);
           setLatestCompiledPrompt("");
-          setIterateFromVersionLabel(null);
           break;
         case "save":
           setLibraryTitle("");
@@ -332,28 +334,35 @@ export function WorkbenchPage({
   }
 
   // ── Autosave session at stage transitions ──
-  async function autosaveSession(overrides?: Record<string, unknown>) {
+  async function autosaveSession(overrides?: Partial<SessionUpdateRequest>) {
+    if (autosaveInflight.current) return;
+    autosaveInflight.current = true;
     try {
       const sessionTitle = deriveSessionTitle(roughIntent, taskType);
-      const payload = {
+      const base = {
         project_id: selectedProjectId || undefined,
         task_type: taskType,
         title: sessionTitle,
         rough_intent: roughIntent.trim() || undefined,
-        selected_model: selectedModel,
         status: "open" as const,
-        ...overrides,
       };
 
       if (sessionId) {
+        const payload: SessionUpdateRequest = {
+          ...base,
+          selected_model: selectedModel,
+          ...overrides,
+        };
         await updateSession(sessionId, payload);
       } else {
-        const session = await createSession(payload);
+        const session = await createSession(base);
         setSessionId(session.id);
       }
       onSessionActive?.(sessionTitle);
-    } catch {
-      // Autosave failures are non-blocking
+    } catch (err) {
+      console.warn("Autosave failed:", err);
+    } finally {
+      autosaveInflight.current = false;
     }
   }
 
@@ -392,11 +401,10 @@ export function WorkbenchPage({
     return result.reformulated_intent;
   }
 
-  function handleIntentContinue() {
+  function handleIntentContinue(skipAutosave?: boolean) {
     // Go to clarify: kick off clarification API call
-    void autosaveSession();
+    if (!skipAutosave) void autosaveSession();
     goToStage("clarify");
-    setBusyAction("clarify");
     void handleClarifyRequest();
   }
 
@@ -486,9 +494,6 @@ export function WorkbenchPage({
   async function handleCompileRequest(baseLabel?: string) {
     setBusyAction("compile");
     setErrorMessage(null);
-    // Accept an explicit baseLabel (passed directly to avoid stale state from
-    // setIterateFromVersionLabel not flushing before the call).
-    const effectiveBase = baseLabel ?? iterateFromVersionLabel;
     try {
       const allRoundAnswers = clarifyRounds.flatMap((r) => r.answers);
       const combined = [...allRoundAnswers, ...allAnswers];
@@ -505,7 +510,10 @@ export function WorkbenchPage({
 
       // Derive the label against the current snapshot of compiledVersions.
       // This is safe because handleCompileRequest is never called concurrently.
-      const versionLabel = deriveVersionLabel(compiledVersions, effectiveBase);
+      const versionLabel = deriveVersionLabel(
+        compiledVersions,
+        baseLabel ?? null,
+      );
       const version: CompiledVersion = {
         id: crypto.randomUUID(),
         version_label: versionLabel,
@@ -515,10 +523,6 @@ export function WorkbenchPage({
         created_at: new Date().toISOString(),
       };
       setCompiledVersions((prev) => [...prev, version]);
-
-      // After a fresh compile, reset iterate-from so any subsequent
-      // Regenerate also starts from scratch unless explicitly set.
-      setIterateFromVersionLabel(null);
 
       void autosaveSession({ append_compiled_version: version });
     } catch (err) {
@@ -746,6 +750,7 @@ export function WorkbenchPage({
             taskType={taskType}
             onIntentChange={setRoughIntent}
             onContinue={handleIntentContinue}
+            onContinueAfterReformulate={() => handleIntentContinue(true)}
             onSkipToModel={handleIntentSkipToModel}
             reformulateIntent={handleReformulateIntent}
             disabled={busyAction !== null}

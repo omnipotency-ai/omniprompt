@@ -19,6 +19,9 @@ interface IntentStageProps {
   taskType: TaskType;
   onIntentChange: (value: string) => void;
   onContinue: () => void;
+  /** Called instead of onContinue when the user accepts a reformulation, so
+   *  the parent can skip its own autosave (the reformulate handler already saved). */
+  onContinueAfterReformulate?: () => void;
   onSkipToModel: () => void;
   reformulateIntent: (roughIntent: string) => Promise<string>;
   disabled?: boolean;
@@ -29,6 +32,7 @@ export function IntentStage({
   taskType,
   onIntentChange,
   onContinue,
+  onContinueAfterReformulate,
   onSkipToModel,
   reformulateIntent,
   disabled,
@@ -60,7 +64,7 @@ export function IntentStage({
   function handleAcceptReformulated() {
     onIntentChange(reformulatedText);
     setReformulateStep("write");
-    onContinue();
+    (onContinueAfterReformulate ?? onContinue)();
   }
 
   function handleBackToWrite() {
