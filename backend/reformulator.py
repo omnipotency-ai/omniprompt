@@ -30,7 +30,6 @@ def reformulate(
             instructions=REFORMULATOR_SYSTEM_PROMPT,
             input=_build_reformulator_prompt(task_type, rough_intent, repo_map_summary),
             text_format=_ReformulatorPayload,
-            text={"verbosity": "low"},
             reasoning={"effort": "low"},
             max_output_tokens=800,
         )

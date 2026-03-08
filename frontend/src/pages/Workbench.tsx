@@ -594,21 +594,24 @@ export function WorkbenchPage({
     setSelectedProjectId(session.project_id ?? "");
     setTaskType(restoredTaskType);
     setRoughIntent(session.rough_intent ?? "");
-    setClarifyRounds(session.clarify_rounds ?? []);
+    // Coerce potentially-absent arrays once to avoid unsafe raw access below
+    const restoredRounds = session.clarify_rounds ?? [];
+    const restoredVersions = session.compiled_versions ?? [];
+
+    setClarifyRounds(restoredRounds);
     setSelectedModel(
       session.selected_model ?? getDefaultModelForTask(restoredTaskType),
     );
-    setCompiledVersions(session.compiled_versions ?? []);
+    setCompiledVersions(restoredVersions);
 
-    const lastVersion =
-      session.compiled_versions[session.compiled_versions.length - 1];
+    const lastVersion = restoredVersions[restoredVersions.length - 1];
     setLatestCompiledPrompt(lastVersion?.compiled_prompt ?? "");
 
-    if (session.compiled_versions.length > 0) {
+    if (restoredVersions.length > 0) {
       setCurrentStage("compile");
     } else if (session.selected_model) {
       setCurrentStage("model");
-    } else if (session.clarify_rounds.length > 0) {
+    } else if (restoredRounds.length > 0) {
       setCurrentStage("clarify");
     } else if (session.rough_intent) {
       setCurrentStage("intent");
