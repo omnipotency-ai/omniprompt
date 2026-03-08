@@ -15,9 +15,11 @@ import type {
   SessionUpdateRequest,
 } from "../types";
 
-const rawEnv = (import.meta as ImportMeta & {
-  env?: Record<string, string | undefined>;
-}).env;
+const rawEnv = (
+  import.meta as ImportMeta & {
+    env?: Record<string, string | undefined>;
+  }
+).env;
 
 export const API_BASE_URL =
   rawEnv?.VITE_API_BASE_URL?.trim() || "http://127.0.0.1:8000";
@@ -35,10 +37,7 @@ type ApiRequestInit = Omit<RequestInit, "body"> & {
   body?: unknown;
 };
 
-async function request<T>(
-  path: string,
-  init?: ApiRequestInit,
-): Promise<T> {
+async function request<T>(path: string, init?: ApiRequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   headers.set("Accept", "application/json");
 
@@ -77,9 +76,7 @@ export function listProjects(): Promise<Project[]> {
   return request<Project[]>("/api/projects");
 }
 
-export function createProject(
-  input: ProjectCreateRequest,
-): Promise<Project> {
+export function createProject(input: ProjectCreateRequest): Promise<Project> {
   return request<Project>("/api/projects", {
     method: "POST",
     body: input,
@@ -94,9 +91,7 @@ export function refreshProjectMap(
   });
 }
 
-export function clarifyIntent(
-  input: ClarifyRequest,
-): Promise<ClarifyResponse> {
+export function clarifyIntent(input: ClarifyRequest): Promise<ClarifyResponse> {
   return request<ClarifyResponse>("/api/clarify", {
     method: "POST",
     body: input,
@@ -110,9 +105,7 @@ export function routeModel(input: RouteRequest): Promise<RouteResponse> {
   });
 }
 
-export function compilePrompt(
-  input: CompileRequest,
-): Promise<CompileResponse> {
+export function compilePrompt(input: CompileRequest): Promise<CompileResponse> {
   return request<CompileResponse>("/api/compile", {
     method: "POST",
     body: input,
@@ -136,13 +129,15 @@ export function listSessions(): Promise<Session[]> {
   return request<Session[]>("/api/sessions");
 }
 
+export function getSession(sessionId: string): Promise<Session> {
+  return request<Session>(`/api/sessions/${sessionId}`);
+}
+
 export function getLatestSession(): Promise<Session | null> {
   return request<Session | null>("/api/sessions/latest");
 }
 
-export function createSession(
-  input: SessionCreateRequest,
-): Promise<Session> {
+export function createSession(input: SessionCreateRequest): Promise<Session> {
   return request<Session>("/api/sessions", {
     method: "POST",
     body: input,
