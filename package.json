@@ -1,0 +1,13 @@
+{
+  "name": "prompt-os",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "cd frontend && bun run dev",
+    "frontend": "cd frontend && bun run dev",
+    "fe": "cd frontend && bun run dev",
+    "backend": "backend/.venv/bin/uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000",
+    "be": "backend/.venv/bin/uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000",
+    "build": "cd frontend && bun run build"
+  }
+}

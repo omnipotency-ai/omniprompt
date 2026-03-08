@@ -1,0 +1,231 @@
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+ModelChoice = Literal["gpt-5.4", "gpt-5-mini", "claude-sonnet-4-6"]
+TaskType = Literal["refactor", "audit", "frontend_iteration"]
+SessionStatus = Literal["open", "closed"]
+ComplexityLevel = Literal["low", "medium", "high"]
+QuestionInputType = Literal["single_choice", "multi_choice", "free_text"]
+
+
+class ApiModel(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+
+class ProjectCreateRequest(ApiModel):
+    name: str = Field(min_length=1, max_length=120)
+    path: str = Field(min_length=1)
+
+    @field_validator("name", "path")
+    @classmethod
+    def validate_non_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("value must not be blank")
+        return stripped
+
+
+class Project(ApiModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1, max_length=120)
+    path: str = Field(min_length=1)
+    repo_map_path: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    last_mapped_at: datetime | None = None
+
+
+class Prompt(ApiModel):
+    id: str = Field(min_length=1)
+    project_id: str = Field(min_length=1)
+    task_type: TaskType
+    session_id: str | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+    rough_intent: str = Field(min_length=1)
+    compiled_prompt: str = Field(min_length=1)
+    target_model: ModelChoice
+    why_it_works: str = Field(min_length=1)
+    effectiveness_rating: int | None = Field(default=None, ge=1, le=5)
+    created_at: datetime
+
+
+class PromptCreateRequest(ApiModel):
+    project_id: str = Field(min_length=1)
+    task_type: TaskType
+    session_id: str | None = Field(default=None, min_length=1)
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+    rough_intent: str = Field(min_length=1)
+    compiled_prompt: str = Field(min_length=1)
+    target_model: ModelChoice
+    why_it_works: str = Field(min_length=1, max_length=4000)
+    effectiveness_rating: int = Field(ge=1, le=5)
+
+
+class SessionNote(ApiModel):
+    id: str = Field(min_length=1)
+    body: str = Field(min_length=1)
+    created_at: datetime
+
+
+class Session(ApiModel):
+    id: str = Field(min_length=1)
+    project_id: str | None = None
+    task_type: TaskType | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+    rough_intent: str | None = None
+    clarifying_questions: list["ClarifyingQuestion"] = Field(default_factory=list)
+    clarifying_answers: list["ClarifyingAnswer"] = Field(default_factory=list)
+    route_result: "RouteResponse | None" = None
+    compile_result: "CompileResponse | None" = None
+    status: SessionStatus = "open"
+    notes: list[SessionNote] = Field(default_factory=list)
+    created_at: datetime
+    updated_at: datetime
+
+
+class SessionCreateRequest(ApiModel):
+    project_id: str | None = Field(default=None, min_length=1)
+    task_type: TaskType | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+    rough_intent: str | None = Field(default=None, min_length=1)
+    clarifying_questions: list["ClarifyingQuestion"] = Field(default_factory=list)
+    clarifying_answers: list["ClarifyingAnswer"] = Field(default_factory=list)
+    route_result: "RouteResponse | None" = None
+    compile_result: "CompileResponse | None" = None
+    status: SessionStatus = "open"
+
+
+class SessionUpdateRequest(ApiModel):
+    project_id: str | None = Field(default=None, min_length=1)
+    task_type: TaskType | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+    rough_intent: str | None = Field(default=None, min_length=1)
+    clarifying_questions: list["ClarifyingQuestion"] | None = None
+    clarifying_answers: list["ClarifyingAnswer"] | None = None
+    route_result: "RouteResponse | None" = None
+    compile_result: "CompileResponse | None" = None
+    status: SessionStatus | None = None
+    note_body: str | None = Field(default=None, min_length=1, max_length=4000)
+
+    @model_validator(mode="after")
+    def validate_has_update(self) -> "SessionUpdateRequest":
+        if all(
+            value is None
+            for value in (
+                self.project_id,
+                self.task_type,
+                self.title,
+                self.rough_intent,
+                self.clarifying_questions,
+                self.clarifying_answers,
+                self.route_result,
+                self.compile_result,
+                self.status,
+                self.note_body,
+            )
+        ):
+            raise ValueError("session update must include at least one change")
+        return self
+
+
+class RepoMapFile(ApiModel):
+    path: str = Field(min_length=1)
+    extension: str | None = None
+    language: str | None = None
+    size_bytes: int = Field(ge=0)
+    exports: list[str] = Field(default_factory=list)
+
+
+class RepoMap(ApiModel):
+    project_id: str = Field(min_length=1)
+    project_name: str = Field(min_length=1)
+    project_path: str = Field(min_length=1)
+    generated_at: datetime
+    file_count: int = Field(ge=0)
+    tree_lines: list[str] = Field(default_factory=list)
+    files: list[RepoMapFile] = Field(default_factory=list)
+    summary: str = Field(min_length=1)
+
+
+class ProjectMapResponse(ApiModel):
+    project: Project
+    repo_map: RepoMap
+
+
+class ClarifyingOption(ApiModel):
+    label: str = Field(min_length=1, max_length=160)
+    value: str = Field(min_length=1, max_length=160)
+
+
+class ClarifyingQuestion(ApiModel):
+    id: str = Field(min_length=1, max_length=64)
+    question: str = Field(min_length=1, max_length=400)
+    input_type: QuestionInputType
+    options: list[ClarifyingOption] = Field(default_factory=list, max_length=6)
+    placeholder: str | None = Field(default=None, max_length=200)
+
+    @model_validator(mode="after")
+    def validate_options(self) -> "ClarifyingQuestion":
+        if self.input_type == "free_text" and self.options:
+            raise ValueError("free_text questions cannot include options")
+        if self.input_type != "free_text" and len(self.options) < 2:
+            raise ValueError("choice questions must include at least two options")
+        return self
+
+
+class ClarifyingAnswer(ApiModel):
+    question_id: str = Field(min_length=1, max_length=64)
+    question: str | None = Field(default=None, min_length=1, max_length=400)
+    answer: str = Field(min_length=1, max_length=1000)
+
+
+class ClarifyRequest(ApiModel):
+    project_id: str | None = Field(default=None, min_length=1)
+    task_type: TaskType
+    rough_intent: str = Field(min_length=1)
+
+
+class ClarifyResponse(ApiModel):
+    task_type: TaskType
+    questions: list[ClarifyingQuestion] = Field(min_length=3, max_length=8)
+    project_context_used: bool
+
+
+class RouteRequest(ApiModel):
+    project_id: str | None = Field(default=None, min_length=1)
+    task_type: TaskType
+    rough_intent: str = Field(min_length=1)
+    answers: list[ClarifyingAnswer] = Field(default_factory=list)
+
+
+class RouteResponse(ApiModel):
+    task_type: TaskType
+    recommended_model: ModelChoice
+    estimated_complexity: ComplexityLevel
+    reasoning: str = Field(min_length=1, max_length=1000)
+    budget_alternative: ModelChoice | None = None
+    advisory_only: bool = True
+
+
+class CompileRequest(ApiModel):
+    project_id: str | None = Field(default=None, min_length=1)
+    task_type: TaskType
+    rough_intent: str = Field(min_length=1)
+    answers: list[ClarifyingAnswer] = Field(default_factory=list)
+    target_model: ModelChoice
+
+
+class CompileResponse(ApiModel):
+    task_type: TaskType
+    target_model: ModelChoice
+    compiled_prompt: str = Field(min_length=1)
+    project_context_used: bool
+
+
+Session.model_rebuild()
+SessionCreateRequest.model_rebuild()
+SessionUpdateRequest.model_rebuild()
