@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-import os
-
-from openai import OpenAI
 from pydantic import BaseModel, Field
 
 try:
     from backend.models import ClarifyResponse, ClarifyingQuestion, TaskType
+    from backend.openai_client import get_client
     from backend.prompts.clarifier_system import (
         CLARIFIER_SYSTEM_PROMPT,
         get_task_clarifier_guidance,
     )
 except ModuleNotFoundError:
     from models import ClarifyResponse, ClarifyingQuestion, TaskType
+    from openai_client import get_client
     from prompts.clarifier_system import (
         CLARIFIER_SYSTEM_PROMPT,
         get_task_clarifier_guidance,
@@ -30,7 +29,7 @@ def generate_clarifying_questions(
     rough_intent: str,
     repo_map_summary: str | None = None,
 ) -> ClarifyResponse:
-    client = _build_client()
+    client = get_client()
     try:
         response = client.responses.parse(
             model=CLARIFIER_MODEL,
@@ -53,13 +52,6 @@ def generate_clarifying_questions(
         questions=parsed.questions,
         project_context_used=bool(repo_map_summary),
     )
-
-
-def _build_client() -> OpenAI:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not configured.")
-    return OpenAI(api_key=api_key)
 
 
 def _build_clarifier_prompt(

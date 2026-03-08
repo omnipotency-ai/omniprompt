@@ -234,63 +234,55 @@ The owner specified these coding principles for all implementation:
   - Write tests before features and iterate until done
   - Use rubrics for quality verification
 
-## 10. Proposed Execution Plan
+## 10. Execution Plan and Status
 
-**Phase 1: Foundation**
+**Phase 1: Foundation — COMPLETE (2026-03-08)**
 
 - Git init + .gitignore + initial commit
 - Clean domain model rewrite (models.py) with proper draft/session/library/version concepts
 - Backend endpoint updates
-- Save progress (commit)
 - Data migration utility for existing JSON files
-- pytest test suite for backend
+- pytest test suite for backend (61 tests)
 - Updated frontend types to match
-- Save progress (commit)
-- Handoff doc
+- Handoff doc: `docs/phase1-handoff.md`
 
-**Phase 2: UI Restructure**
+**Phase 2: UI Restructure — COMPLETE (2026-03-08)**
 
-- Progressive disclosure workflow
-- Real navigation (header, sidebar with draft/session status)
-- Stage gating (clarify after intent, model after clarify, compile after model)
-- Save progress (commit)
-- Compact model recommendation
-- Compile as payoff surface
-- Task type rename and copy rewrite
-- Dark mode switcher with tokenised colour palettes
-- Save progress (commit)
-- Frontend unit tests
-- Handoff doc
-- Backend fixes from Phase 1 audit:
-  - Share a single OpenAI client instance across clarifier/compiler/router (avoid recreating per call)
-  - Run harvester in a thread pool to avoid blocking the FastAPI event loop
-  - Tighten CORS allow_origin_regex to match only expected dev ports
-  - Sanitize OpenAI error messages before returning in HTTP responses (avoid leaking API key in auth errors)
+- Backend audit fixes: shared OpenAI client, async harvester, tightened CORS, sanitized errors
+- CSS design tokens + dark mode with ThemeSwitcher
+- Navigation shell: global header, icon-based sidebar nav, collapsible session section
+- API client alignment (getSession, verified types)
+- Progressive disclosure workflow engine: 6-stage Workbench rewrite with stage gating
+- 7 stage components: WorkflowStage, ContextStage, IntentStage, ClarifyStage, ModelStage, CompileStage, SaveStage
+- Copy rewrite: all jargon replaced with plain/technical-with-explanation tone
+- Frontend unit tests: vitest + testing-library, 36 tests
+- Total tests: 67 backend + 36 frontend = 103
+- Handoff doc: `docs/phase2-handoff.md`
 
-**Phase 3: End-to-End Flows**
+**Phase 3: End-to-End Flows — NOT STARTED**
 
-- Autosave implementation (at stage transitions)
-- Draft restore (repopulates all visible state)
-- Version history (multiple compiled prompts per session with decimal versioning)
-- Save progress (commit)
+- Autosave implementation (at stage transitions — framework exists, needs wiring)
+- Draft restore (repopulate all visible state from session)
+- Version history (decimal versioning 3.01, 3.02 — currently integer bumps)
 - Revision lineage (iterate from previous version)
 - Intent reformulation step (GPT 5.4 articulates task before clarification)
-- Library save flow (simple save + optional expected result assessment)
-- Save progress (commit)
+- Library save flow refinement
+- Dark mode for Library.tsx and Projects.tsx (still use static @theme palette classes)
+- Wire sidebar session section to actual session state
 - Playwright E2E tests
 - Final handoff doc
 
-## 11. Technical Decisions Already Observable
+## 11. Technical Decisions (Current State)
 
-These are what the code currently does. They are not necessarily to be maintained if another approach is more efficient, uses more robust code, or can be simplified:
-
-1. **OpenAI is the AI provider** for all backend intelligence (clarifier, compiler, router). The OpenAI `responses` API is used (not chat completions).
+1. **OpenAI is the AI provider** for all backend intelligence (clarifier, compiler, router). The OpenAI `responses` API is used (not chat completions). A shared thread-safe singleton client is used across all modules (`backend/openai_client.py`).
 2. **File-based persistence** with atomic writes (write to .tmp, rename). No database.
 3. **No authentication** - single-user local app.
-4. **CORS configured** for localhost development only.
+4. **CORS restricted** to explicit localhost origins (ports 3000, 3005, 5173).
 5. **The compiler reads kernel/models/\*.md** at startup (cached with lru_cache) and injects model-specific knowledge into compilation prompts.
 6. **Router uses structured output** (OpenAI's `responses.parse`) to get typed model recommendations.
 7. **Clarifier uses structured output** to get typed question sets.
-8. **Frontend state is entirely in Workbench.tsx** (~907 lines of useState). No state management library.
+8. **Frontend uses progressive disclosure** — Workbench.tsx (~637 lines) orchestrates 7 stage components. No state management library (useState only).
 9. **No URL-based routing** - page switching is via useState in App.tsx.
-10. **Session sidebar is a separate component** but tightly coupled to Workbench state via callbacks.
+10. **CSS design token system** with light/dark mode via CSS custom properties and `[data-theme]` attribute.
+11. **Harvester runs in thread pool** (`asyncio.to_thread`) to avoid blocking the FastAPI event loop.
+12. **AI error messages sanitized** to prevent API key leaks in HTTP responses.

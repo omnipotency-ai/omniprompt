@@ -1,115 +1,156 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import {
+  Wrench,
+  BookOpen,
+  FolderGit2,
+  ChevronDown,
+  type LucideIcon,
+} from "lucide-react";
 
+import { ThemeSwitcher } from "./components/ThemeSwitcher";
 import { LibraryPage } from "./pages/Library";
 import { ProjectsPage } from "./pages/Projects";
 import { WorkbenchPage } from "./pages/Workbench";
 
 type PageId = "workbench" | "library" | "projects";
 
-const NAV_ITEMS: Array<{
+interface NavItem {
   id: PageId;
   label: string;
-  kicker: string;
-  description: string;
-}> = [
-  {
-    id: "workbench",
-    label: "Workbench",
-    kicker: "Prompt workflow",
-    description:
-      "Shape intent, clarify what matters, choose the audience model, and keep session state visible while you iterate.",
-  },
-  {
-    id: "library",
-    label: "Library",
-    kicker: "Saved prompts",
-    description:
-      "Review successful prompts, the notes behind them, and the model-task combinations worth reusing.",
-  },
-  {
-    id: "projects",
-    label: "Projects",
-    kicker: "Repo context",
-    description:
-      "Register codebases and refresh repo maps so downstream prompt work stays grounded in the right source tree.",
-  },
+  icon: LucideIcon;
+  badge?: number;
+}
+
+const NAV: NavItem[] = [
+  { id: "workbench", label: "Workbench", icon: Wrench },
+  { id: "library", label: "Library", icon: BookOpen },
+  { id: "projects", label: "Projects", icon: FolderGit2 },
 ];
 
 export default function App() {
   const [activePage, setActivePage] = useState<PageId>("workbench");
   const [projectsVersion, setProjectsVersion] = useState(0);
 
-  const activeItem = useMemo(
-    () => NAV_ITEMS.find((item) => item.id === activePage) ?? NAV_ITEMS[0],
-    [activePage],
-  );
-
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(47,91,209,0.16),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(16,24,40,0.08),transparent_28%),linear-gradient(180deg,#f7f9fc_0%,#eef3f8_100%)]">
-      <div className="mx-auto grid min-h-screen w-full max-w-[1600px] gap-5 px-4 py-4 lg:grid-cols-[17rem_minmax(0,1fr)] lg:px-6 lg:py-6">
-        <aside className="app-sidebar flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start">
-          <div className="grid gap-3">
-            <div className="grid gap-2">
-              <p className="eyebrow">Prompt compiler</p>
-              <h1 className="text-[2.1rem] font-semibold tracking-[-0.05em] text-ink-900">
-                Prompt OS
-              </h1>
-            </div>
-            <p className="section-copy">
-              Turn rough engineering asks into sharper prompt artifacts with project
-              context, saved sessions, and a reusable library.
-            </p>
-          </div>
+    <div className="min-h-screen">
+      {/* ── Global header ── */}
+      <header
+        className="flex items-center justify-between px-5 py-3 lg:px-6"
+        style={{
+          borderBottom: "1px solid var(--border-default)",
+          background: "var(--bg-elevated)",
+          backdropFilter: "blur(12px)",
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <h1
+            className="text-lg font-semibold tracking-tight"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Prompt OS
+          </h1>
+          <span
+            className="hidden text-sm sm:inline"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Rough intent to sharp prompts
+          </span>
+        </div>
+        <ThemeSwitcher />
+      </header>
 
-          <nav className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1" aria-label="Primary">
-            {NAV_ITEMS.map((item) => {
+      {/* ── Body: sidebar + main ── */}
+      <div className="mx-auto grid min-h-[calc(100vh-3.25rem)] w-full max-w-[1600px] gap-0 lg:grid-cols-[13.5rem_minmax(0,1fr)]">
+        {/* ── Left sidebar ── */}
+        <aside
+          className="flex flex-col gap-6 px-3 py-4 lg:sticky lg:top-0 lg:h-[calc(100vh-3.25rem)] lg:overflow-y-auto"
+          style={{ borderRight: "1px solid var(--border-default)" }}
+        >
+          {/* Primary nav */}
+          <nav className="grid gap-0.5" aria-label="Primary">
+            {NAV.map((item) => {
               const active = activePage === item.id;
+              const Icon = item.icon;
               return (
                 <button
                   key={item.id}
                   type="button"
-                  className={`nav-item ${active ? "nav-item-active" : "nav-item-inactive"}`}
                   onClick={() => setActivePage(item.id)}
                   aria-current={active ? "page" : undefined}
+                  className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-colors duration-150"
+                  style={{
+                    color: active
+                      ? "var(--accent-text)"
+                      : "var(--text-secondary)",
+                    background: active ? "var(--accent-muted)" : "transparent",
+                    borderLeft: active
+                      ? "2px solid var(--accent-primary)"
+                      : "2px solid transparent",
+                  }}
                 >
-                  <span className="eyebrow">{item.kicker}</span>
-                  <span className="text-base font-semibold text-ink-900">{item.label}</span>
+                  <Icon size={16} aria-hidden />
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge !== undefined && (
+                    <span className="badge badge-muted">{item.badge}</span>
+                  )}
                 </button>
               );
             })}
           </nav>
 
-          <div className="panel-subtle grid gap-2">
-            <p className="eyebrow">Current surface</p>
-            <div className="grid gap-1">
-              <strong className="text-base font-semibold text-ink-900">
-                {activeItem.label}
-              </strong>
-              <p className="section-copy">{activeItem.description}</p>
-            </div>
-          </div>
+          {/* Draft / session placeholder (collapsible) */}
+          <SessionSection />
         </aside>
 
-        <div className="min-w-0 py-1">
-          <main className="min-w-0">
-            {activePage === "workbench" ? (
-              <WorkbenchPage
-                refreshKey={projectsVersion}
-                onOpenProjects={() => setActivePage("projects")}
-              />
-            ) : activePage === "library" ? (
-              <LibraryPage />
-            ) : (
-              <ProjectsPage
-                onProjectsMutated={() => {
-                  setProjectsVersion((current) => current + 1);
-                }}
-                onBackToWorkbench={() => setActivePage("workbench")}
-              />
-            )}
-          </main>
-        </div>
+        {/* ── Main content ── */}
+        <main className="min-w-0 px-4 py-4 lg:px-6 lg:py-6">
+          {activePage === "workbench" ? (
+            <WorkbenchPage
+              refreshKey={projectsVersion}
+              onOpenProjects={() => setActivePage("projects")}
+            />
+          ) : activePage === "library" ? (
+            <LibraryPage />
+          ) : (
+            <ProjectsPage
+              onProjectsMutated={() => {
+                setProjectsVersion((current) => current + 1);
+              }}
+              onBackToWorkbench={() => setActivePage("workbench")}
+            />
+          )}
+        </main>
       </div>
+    </div>
+  );
+}
+
+function SessionSection() {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <div className="grid gap-1">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex items-center gap-1.5 py-1 text-left"
+      >
+        <ChevronDown
+          size={14}
+          aria-hidden
+          className="transition-transform duration-150"
+          style={{
+            color: "var(--text-muted)",
+            transform: open ? "rotate(0deg)" : "rotate(-90deg)",
+          }}
+        />
+        <span className="eyebrow">Session</span>
+      </button>
+      {open && (
+        <p className="pl-5 text-sm" style={{ color: "var(--text-muted)" }}>
+          No active session
+        </p>
+      )}
     </div>
   );
 }
