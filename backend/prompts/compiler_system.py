@@ -32,12 +32,74 @@ MODEL_COMPILATION_GUIDANCE = {
 - Use optional frontend-specific guidance only when the task actually touches the UI.
 - Do not require exposed chain-of-thought unless the user explicitly wants a visible thinking section.
 """.strip(),
+    "claude-opus-4-6": """
+- Use clear XML sections; Opus follows well-structured prompts especially well.
+- Opus excels at deep reasoning, long-horizon planning, and complex architecture work.
+- Prefer Opus when the task requires sustained multi-step reasoning across many files, architectural synthesis, or resolving deep contradictions.
+- Be explicit about scope, non-goals, constraints, and the exact artifact to return.
+- For coding work, prefer sequential execution rules, explicit prerequisite checks, and thorough verification steps.
+- Encourage the model to surface architectural tradeoffs, second-order effects, and long-term maintainability concerns.
+- Keep the prompt constraint-forward: do not add extra features, do not widen scope silently, and preserve existing behavior unless told otherwise.
+- Do not require exposed chain-of-thought unless the user explicitly wants a visible thinking section.
+""".strip(),
+    "claude-haiku-4-5": """
+- Keep the prompt narrower, more prescriptive, and more sequential than for Sonnet or Opus.
+- Prefer explicit scope limits, fixed step order, and short stop conditions.
+- Ask for compact execution with strong instruction following rather than broad exploration.
+- Use verification, but keep it lightweight and concrete.
+- Haiku is best when the task is already well-scoped, prescriptive, and low-risk.
+""".strip(),
+    "gpt-4.1": """
+- GPT-4.1 is a reliable general-purpose model with strong code generation and structured output.
+- Use explicit XML-style sections; GPT-4.1 follows block-structured instructions well.
+- Keep outputs compact and structured. Prefer concise, information-dense instructions over long prose.
+- Define what "done" means and how to behave when a dependency or verification step fails.
+- For coding workflows, make tool boundaries explicit: inspect first, verify before destructive changes.
+- Good for structured output tasks, code generation, and medium-complexity coding work.
+""".strip(),
+    "gemini-3.0-pro": """
+- Gemini Pro excels at long-context analysis, multimodal reasoning, and deep code analysis.
+- Use clear section structure; Gemini follows well-organized prompts effectively.
+- Leverage its strong long-context window for tasks that require reading and reasoning over many files simultaneously.
+- Be explicit about scope, constraints, and the exact artifact to return.
+- For coding work, prefer sequential execution with explicit verification steps.
+- Good for broad audits, architecture analysis, and tasks requiring synthesis across large codebases.
+""".strip(),
+    "gemini-3.0-flash": """
+- Keep the prompt narrower, more prescriptive, and more sequential than for Gemini Pro.
+- Prefer explicit scope limits, fixed step order, and short stop conditions.
+- Ask for compact execution with strong instruction following rather than broad exploration.
+- Use verification, but keep it lightweight and concrete.
+- Flash is best when the task is already well-scoped, prescriptive, and low-risk.
+""".strip(),
+    "kimi-k2.5": """
+- Kimi excels at long-context code understanding and agentic coding workflows.
+- Use clear section structure with explicit step ordering.
+- Leverage its strong long-context window for tasks that span many files.
+- Be explicit about scope, constraints, verification steps, and the exact artifact to return.
+- For coding work, prefer sequential execution with clear dependency chains.
+- Good for agentic multi-step coding tasks that require sustained focus across a large codebase.
+""".strip(),
+    "minimax-m2.5": """
+- MiniMax is efficient at structured output and batch processing tasks.
+- Keep prompts concise and prescriptive with clear step ordering.
+- Prefer explicit scope limits, fixed step order, and short stop conditions.
+- Good for tasks requiring structured, repeatable output patterns.
+- Use verification, but keep it lightweight and concrete.
+""".strip(),
 }
 
 MODEL_KNOWLEDGE_FILES = {
     "gpt-5.4": "gpt-5.4.md",
     "gpt-5-mini": "gpt-5-mini.md",
     "claude-sonnet-4-6": "claude-sonnet-4-6.md",
+    "claude-opus-4-6": "claude-opus-4-6.md",
+    "claude-haiku-4-5": "claude-haiku-4-5.md",
+    "gpt-4.1": "gpt-4.1.md",
+    "gemini-3.0-flash": "gemini-3.0-flash.md",
+    "gemini-3.0-pro": "gemini-3.0-pro.md",
+    "kimi-k2.5": "kimi-k2.5.md",
+    "minimax-m2.5": "minimax-m2.5.md",
 }
 
 TASK_COMPILATION_GUIDANCE = {
@@ -70,8 +132,8 @@ The final prompt should:
 - use a research-style audit flow when the audit is broad: plan the audit lenses, retrieve evidence, then synthesize findings,
 - keep implementation changes out of scope unless the user explicitly asks for a follow-on refactor or fix.
 """.strip(),
-    "frontend_iteration": """
-Task type: frontend_iteration
+    "frontend": """
+Task type: frontend
 
 Compile a prompt for improving an existing frontend surface without misframing the job as a broad refactor or a pure audit.
 The final prompt should:
@@ -83,6 +145,18 @@ The final prompt should:
 - bias toward concrete, implementation-ready frontend work rather than abstract design commentary when the user wants code changes,
 - include frontend-specific design guidance only when relevant,
 - keep the work grounded in the existing repo and current user-facing behavior instead of turning it into a zero-to-one redesign.
+""".strip(),
+    "implement": """
+Task type: implement
+
+Compile a prompt for executing a batch of small, concrete, prescriptive changes with no ambiguity.
+The final prompt should:
+- list each discrete change explicitly with file, component, and acceptance criteria,
+- use a tight numbered step list rather than open-ended exploration,
+- skip broad diagnosis or architecture discussion — the scope is already known,
+- include a short verification step per change or a single batch verification at the end,
+- keep the prompt compact and action-oriented,
+- bias toward straightforward execution rather than deep reasoning.
 """.strip(),
 }
 
@@ -318,7 +392,7 @@ Optional sections when relevant:
 - <citation_rules> only when external sources are part of the workflow.
 - <frontend_tasks> if the audit is specifically about frontend design or UX implementation quality.
 """.strip(),
-        "frontend_iteration": """
+        "frontend": """
 Required prompt structure for GPT-5.4 frontend iteration work:
 <context>
 The current frontend situation, what feels wrong, what should be preserved, and any relevant repo or product background.
@@ -391,6 +465,32 @@ Only the most relevant screens, components, styling systems, state boundaries, o
 - If a patch or edit tool exists, use it directly.
 - Run a lightweight verification step before declaring the task done.
 </terminal_tool_hygiene>
+""".strip(),
+        "implement": """
+Required prompt structure for GPT-5.4 implement work:
+<context>
+Short background on the batch of changes requested.
+</context>
+<task>
+The exact list of discrete changes. Each change specifies the file, component, and what to do.
+</task>
+<repo_context>
+Only the files and components directly touched by the changes.
+</repo_context>
+<steps>
+A numbered list of concrete steps, one per change or logical group.
+</steps>
+<constraints>
+- Do not widen scope beyond the listed changes.
+- Do not refactor or reorganize surrounding code.
+- Preserve existing behavior for everything not explicitly listed.
+</constraints>
+<output_contract>
+Return the completed changes. Keep output compact.
+</output_contract>
+<verification_loop>
+Run one lightweight verification step per change or a single batch check at the end.
+</verification_loop>
 """.strip(),
     },
     "claude-sonnet-4-6": {
@@ -473,7 +573,7 @@ Optional sections when relevant:
 - <prioritization> when the user wants findings ranked by severity or impact.
 - <follow_on_plan> when the audit should end with a refactor sequence.
 """.strip(),
-        "frontend_iteration": """
+        "frontend": """
 Required prompt structure for Claude Sonnet 4.6 frontend iteration work:
 <context>
 The current frontend situation, what feels wrong, what should stay stable, and why this improvement matters.
@@ -518,8 +618,299 @@ Optional sections when relevant:
 - <interconnections> for how the touched files and UI surfaces relate to each other.
 - <responsive_checks> when mobile and desktop behavior both matter.
 """.strip(),
+        "implement": """
+Required prompt structure for Claude Sonnet 4.6 implement work:
+<context>
+Short background on the batch of changes requested.
+</context>
+<task>
+The exact list of discrete changes. Each change specifies the file, component, and what to do.
+</task>
+<project_context>
+Only the files and components directly touched by the changes.
+</project_context>
+<steps>
+A numbered list of concrete steps, one per change or logical group.
+</steps>
+<constraints>
+- Do not widen scope beyond the listed changes.
+- Do not refactor or reorganize surrounding code.
+- Preserve existing behavior for everything not explicitly listed.
+</constraints>
+<output_contract>
+Return the completed changes. Keep output compact.
+</output_contract>
+<verification>
+Run one lightweight verification step per change or a single batch check at the end.
+</verification>
+""".strip(),
     },
     "gpt-5-mini": """
+Final prompt structure:
+<context>
+Short task background.
+</context>
+<task>
+The exact bounded job.
+</task>
+<scope>
+What to inspect or change, and what to ignore.
+</scope>
+<steps>
+1. Inspect the named area.
+2. Perform the bounded task.
+3. Verify the result.
+</steps>
+<output_contract>
+Return only the requested artifact in the requested shape.
+</output_contract>
+<stop_conditions>
+Stop when the bounded task is complete or when required context is missing.
+</stop_conditions>
+<verification_loop>
+Run one lightweight verification step before finishing.
+</verification_loop>
+""".strip(),
+    "claude-opus-4-6": {
+        "refactor": """
+Required prompt structure for Claude Opus 4.6 refactor work:
+<context>
+The user goal, current symptoms, unresolved uncertainty, and why this refactor matters.
+</context>
+<task>
+The exact refactor job. State clearly whether the model should diagnose first, then implement, or produce a staged refactor plan before editing.
+</task>
+<project_context>
+Only the most relevant repo structure, files, seams, or subsystem context.
+</project_context>
+<constraints>
+- Preserve behavior unless the user explicitly wants behavior changes.
+- Do not add extra features or widen scope silently.
+- Avoid unrelated cleanup.
+</constraints>
+<execution_rules>
+- Inspect before editing.
+- Resolve prerequisite lookups before acting.
+- Prefer staged, reviewable refactors when the scope is broad.
+- Surface architectural tradeoffs, second-order effects, and long-term maintainability concerns.
+</execution_rules>
+<output_contract>
+Return exactly the artifact the user asked for, in the requested order.
+</output_contract>
+<verification>
+Check correctness, grounding, and that constraints were respected. Run at least one verification step before finishing.
+</verification>
+""".strip(),
+        "audit": """
+Required prompt structure for Claude Opus 4.6 audit work:
+<context>
+The audit goal, source of truth, current uncertainty, and why this audit matters.
+</context>
+<task>
+The exact audit job. State whether the desired output is findings only, a prioritized action list, or a follow-on refactor plan.
+</task>
+<project_context>
+Only the most relevant repo structure, files, flows, or subsystem context.
+</project_context>
+<constraints>
+- Do not invent missing repo details.
+- Keep implementation changes out of scope unless the user explicitly asks.
+- Distinguish observed facts from inferences.
+</constraints>
+<audit_rules>
+- Inspect enough of the codebase to support each major claim.
+- Follow dependencies before drawing conclusions.
+- Surface contradictions, unnecessary code, and behavior-versus-intent mismatches.
+</audit_rules>
+<output_contract>
+Return exactly the requested review format with concrete evidence attached to each claim.
+</output_contract>
+<verification>
+Confirm each finding is grounded in inspected code. Run one verification step before finalizing.
+</verification>
+""".strip(),
+        "frontend": """
+Required prompt structure for Claude Opus 4.6 frontend iteration work:
+<context>
+The current frontend situation, what feels wrong, what should stay stable, and why this improvement matters.
+</context>
+<task>
+The exact frontend improvement job.
+</task>
+<project_context>
+Only the most relevant screens, components, styling rules, state boundaries, and interaction flows.
+</project_context>
+<constraints>
+- Preserve existing core behavior unless the user explicitly wants changes.
+- Do not silently turn this into a broad refactor or zero-to-one redesign.
+</constraints>
+<frontend_system>
+Treat the affected frontend as one connected system. Consider component relationships, shared state, visual hierarchy, and accessibility together.
+</frontend_system>
+<output_contract>
+Return exactly the artifact the user asked for.
+</output_contract>
+<verification>
+Check that the UI direction matches the user's goal and related flows remain coherent.
+</verification>
+""".strip(),
+        "implement": """
+Required prompt structure for Claude Opus 4.6 implement work:
+<context>
+Short background on the batch of changes requested.
+</context>
+<task>
+The exact list of discrete changes. Each change specifies the file, component, and what to do.
+</task>
+<project_context>
+Only the files and components directly touched by the changes.
+</project_context>
+<steps>
+A numbered list of concrete steps, one per change or logical group.
+</steps>
+<constraints>
+- Do not widen scope beyond the listed changes.
+- Preserve existing behavior for everything not explicitly listed.
+</constraints>
+<output_contract>
+Return the completed changes. Keep output compact.
+</output_contract>
+<verification>
+Run one lightweight verification step per change or a single batch check at the end.
+</verification>
+""".strip(),
+    },
+    "claude-haiku-4-5": """
+Final prompt structure:
+<context>
+Short task background.
+</context>
+<task>
+The exact bounded job.
+</task>
+<scope>
+What to inspect or change, and what to ignore.
+</scope>
+<steps>
+1. Inspect the named area.
+2. Perform the bounded task.
+3. Verify the result.
+</steps>
+<output_contract>
+Return only the requested artifact in the requested shape.
+</output_contract>
+<stop_conditions>
+Stop when the bounded task is complete or when required context is missing.
+</stop_conditions>
+<verification_loop>
+Run one lightweight verification step before finishing.
+</verification_loop>
+""".strip(),
+    "gpt-4.1": """
+Final prompt structure:
+<context>
+Short task background.
+</context>
+<task>
+The exact bounded job.
+</task>
+<scope>
+What to inspect or change, and what to ignore.
+</scope>
+<steps>
+1. Inspect the named area.
+2. Perform the bounded task.
+3. Verify the result.
+</steps>
+<output_contract>
+Return only the requested artifact in the requested shape.
+</output_contract>
+<stop_conditions>
+Stop when the bounded task is complete or when required context is missing.
+</stop_conditions>
+<verification_loop>
+Run one lightweight verification step before finishing.
+</verification_loop>
+""".strip(),
+    "gemini-3.0-pro": """
+Final prompt structure:
+<context>
+Short task background.
+</context>
+<task>
+The exact bounded job.
+</task>
+<scope>
+What to inspect or change, and what to ignore.
+</scope>
+<steps>
+1. Inspect the named area.
+2. Perform the bounded task.
+3. Verify the result.
+</steps>
+<output_contract>
+Return only the requested artifact in the requested shape.
+</output_contract>
+<stop_conditions>
+Stop when the bounded task is complete or when required context is missing.
+</stop_conditions>
+<verification_loop>
+Run one lightweight verification step before finishing.
+</verification_loop>
+""".strip(),
+    "gemini-3.0-flash": """
+Final prompt structure:
+<context>
+Short task background.
+</context>
+<task>
+The exact bounded job.
+</task>
+<scope>
+What to inspect or change, and what to ignore.
+</scope>
+<steps>
+1. Inspect the named area.
+2. Perform the bounded task.
+3. Verify the result.
+</steps>
+<output_contract>
+Return only the requested artifact in the requested shape.
+</output_contract>
+<stop_conditions>
+Stop when the bounded task is complete or when required context is missing.
+</stop_conditions>
+<verification_loop>
+Run one lightweight verification step before finishing.
+</verification_loop>
+""".strip(),
+    "kimi-k2.5": """
+Final prompt structure:
+<context>
+Short task background.
+</context>
+<task>
+The exact bounded job.
+</task>
+<scope>
+What to inspect or change, and what to ignore.
+</scope>
+<steps>
+1. Inspect the named area.
+2. Perform the bounded task.
+3. Verify the result.
+</steps>
+<output_contract>
+Return only the requested artifact in the requested shape.
+</output_contract>
+<stop_conditions>
+Stop when the bounded task is complete or when required context is missing.
+</stop_conditions>
+<verification_loop>
+Run one lightweight verification step before finishing.
+</verification_loop>
+""".strip(),
+    "minimax-m2.5": """
 Final prompt structure:
 <context>
 Short task background.

@@ -27,8 +27,8 @@ Prioritize questions that clarify:
 - whether the user wants a ruthless cleanup lens or a conservative review lens,
 - which contradictions, collateral effects, or “if we change this then what else breaks” questions matter most.
 """.strip(),
-    "frontend_iteration": """
-Task type: frontend_iteration
+    "frontend": """
+Task type: frontend
 
 The user has a working frontend and wants it improved, clarified, or redesigned without reframing the job as a broad refactor or a pure audit.
 Prioritize questions that clarify:
@@ -40,6 +40,18 @@ Prioritize questions that clarify:
 - what the current UI gets wrong in practice: ugly styling, confusing flow, weak hierarchy, inconsistent spacing, unclear actions, or poor state feedback,
 - whether there are brand, tone, accessibility, mobile, or responsiveness constraints,
 - what collateral damage matters most if the design changes, such as broken flows, disconnected components, or unsaved-state behavior drifting out of sync.
+""".strip(),
+    "implement": """
+Task type: implement
+
+The user has a batch of small, concrete, prescriptive changes — change an icon, add a prop, move a label, swap a color token, rename a variable. There is little ambiguity about what needs to happen.
+Prioritize questions that clarify:
+- the exact list of discrete changes the user wants made,
+- which files or components each change touches,
+- acceptance criteria for each change (what "done" looks like),
+- whether any of the changes depend on each other or can be done in any order,
+- whether there are constraints on tooling, framework version, or coding style that matter for these changes.
+Keep the question count low (2-4). Do not over-clarify when the intent is already specific.
 """.strip(),
 }
 
