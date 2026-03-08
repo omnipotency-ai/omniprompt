@@ -1,0 +1,240 @@
+**Plan**
+The coherent direction is to turn this from a "dashboard of cards" into a guided workspace with progressive disclosure, clearer semantics, and less cognitive branching.
+
+**1. Product Direction**
+- Treat the app as a guided prompt-building workflow, not a collection of equal-weight panels.
+- Optimize for ADHD-friendly use: fewer simultaneous choices, stronger step boundaries, clearer "what happens next," persistent recovery points, and less decorative ambiguity.
+- Separate two concerns that are currently conflated:
+  - Navigation: where am I in the app?
+  - Workflow state: where am I in this prompt-building process?
+
+**2. Core UX Problems To Fix**
+- The global shell is semantically wrong:
+  - "Prompt compiler / Prompt OS / descriptive copy" reads like a header.
+  - "Prompt workflow / Saved prompts / Repo context" are navigation, but styled like content cards.
+- The workbench exposes too much at once:
+  - Context, intent, clarify, model, compile, and session are all visible concurrently.
+  - This creates scanning overhead instead of a guided progression.
+- The session concept is underdefined:
+  - "Session active" does not visibly restore prior state in a meaningful way.
+  - Notes are overemphasized relative to the actual value of a session.
+- Task types are underspecified and partially misleading:
+  - Labels and helper text assume cleanup-oriented work.
+  - "Frontend iteration" and "audit" need sharper scopes.
+- Intent guidance is too jargon-heavy:
+  - Phrases like "add signal," "readable," "constraints to preserve," and "blast radius" are not plain product language.
+- Interaction feedback is weak:
+  - Hover, pressed, loading, selected, and completed states are not consistently obvious.
+- The step order is off:
+  - Model choice should come after intent clarification, not as a parallel peer to everything else. The model choice dictates model-specific output structure: different models expect different structured output, space for thinking, verbosity, effort levels, etc. Getting the model right before compilation is critical to prompt quality.
+
+**3. ADHD-Friendly Design Principles**
+- One primary action per stage.
+- Show only the current stage in full detail.
+- Collapse completed stages into concise summaries.
+- Keep orientation persistent:
+  - current page
+  - current workflow step
+  - what has been completed
+  - what is blocked
+- Prefer plain language over internal reasoning jargon.
+- Reduce decision points until they are relevant.
+- Make restoration explicit:
+  - if a session exists, reopening it must repopulate visible state and explain what was restored.
+
+**4. Information Architecture**
+- Global header:
+  - App name
+  - short product description
+  - optional global actions
+- Left sidebar:
+  - real navigation items, styled as navigation
+  - Workbench
+  - Library
+  - Projects
+  - optional icons from Heroicons or Lucide
+  - Drafts/Sessions status as a collapsible section in the sidebar, allowing users to switch between them
+- Workbench body:
+  - single guided vertical workflow
+  - each stage is a section or accordion
+
+**5. Proposed Workbench Structure**
+Use a strict step model.
+
+1. Context
+- Includes:
+  - project selection
+  - task type
+- Clarify what "context" means:
+  - selected codebase
+  - repo map availability
+  - task framing mode
+- Make explanatory copy discoverable via tooltips or expandable sections.
+- Convert task-type cards into more descriptive and actionable options. Use a FAQ-style accordion for displaying each card in a list where the other cards are collapsed.
+
+2. Intent
+- This becomes the main interaction area.
+- Rename "Next step" to `2. Intent`.
+- Replace cleanup-biased helper text with conditional guidance based on task type.
+- Make this feel conversational with this flow:
+  a. User writes the task in their own words.
+  b. System sends task to GPT 5.4 to articulate the task better prior to adding technical implementation or documentation: reformats, makes it coherent and cohesive, separates different subjects out for clearer iteration.
+  c. User accepts changes. The original input is archived and the new input becomes the reformatted version (still editable by the user).
+  d. When user is ready for clarifying questions, they submit the prompt for GPT 5.4 to generate clarifying questions.
+  e. System (GPT 5.4) asks clarifying questions to reduce ambiguity. The questions are designed to get to the heart of the user's intent or reason for the prompt. Once the system understands the intent fully, combined with the codebase repo map and the model-specific constraints and requirements, it can create the prompt appropriate to evoke the best response from the model to achieve the user's request with no ambiguity. A free text option is always available for each question asked. Users can also skip clarifying questions if confident in their prompt, or ask for a second or further round of clarifying questions.
+  f. User answers clarifying questions and clicks submit answers. Questions disappear into an expandable summary row. System asks for model recommendation. Recommendation provided directly below. User accepts recommendation or manually selects a different model from a dropdown. On selection of the model (clicking accept or selecting from dropdown) the next stage begins: compiling.
+
+3. Model
+- Comes after intent is sufficiently clarified.
+- Default behavior:
+  - system recommends model based on scope/complexity
+- User can override.
+- This should be compact, not a dominant panel.
+- The "why this model" explanation should be collapsible.
+
+4. Compile
+- Final stage.
+- Primary action is `Compile Prompt`.
+- When compiling:
+  - earlier stages collapse into summaries
+  - intent and selected model remain visible
+  - compiled prompt appears in a focused comparison/output area
+
+5. Save / Iterate
+- Save should be explicit and reliable.
+- After compile, provide:
+  - save draft
+  - save to library
+  - reopen later
+  - iterate from this prompt
+
+**6. Progressive Disclosure Rules**
+- Only expand the current stage.
+- Prior completed stages collapse into summary rows:
+  - Context: `_prompt_os`, `Frontend`
+  - Intent: two to three sentence summary
+  - Model: `Claude Sonnet 4.6 (recommended)`
+- Clarifying questions appear only after submitting intent.
+- Model options appear only after intent is stable enough.
+- Compile appears only after a model is selected or accepted.
+- Advanced controls should be hidden behind "Show details":
+  - reasoning for model recommendation
+  - repo-map metadata
+  - verbose prompt compilation notes
+
+**7. Navigation + Shell Plan**
+- Move brand block into a true global header.
+- Convert sidebar items into unmistakable nav rows:
+  - icon
+  - label
+  - active state
+  - optional badge/count
+- Remove card styling from navigation.
+- Merge session/draft presence into the sidebar as a collapsible section, not the main layout.
+- Keep the left column visually lighter and structurally simpler.
+
+**8. Session Strategy**
+Two-track plan: drafts for in-progress work, sessions for completed/paused units. See project-context.md section 3 for the confirmed draft vs session vs library distinction.
+
+**9. Task Type Redesign**
+Current task types need rewriting.
+
+Confirmed set (day one):
+- `Refactor` - Restructure code without changing intended behavior.
+- `Frontend` - Change UI, layout, interaction, styling, or UX flows.
+- `Audit` - Evaluate quality, risk, performance, maintainability, duplication, or implementation-vs-intent.
+- `Implement` - Small, concrete, prescriptive tasks: "change this icon", "add this prop", "move this label". Designed for batches of discrete changes with no ambiguity. Lighter clarification flow than the other types.
+
+Future additions (defined but not yet built):
+- `Plan` - Design or spec work
+- `Bugfix` - Fix broken behavior
+- `Test` - Write or improve tests
+- `Commit` - Prepare commit messages or PR descriptions
+- `Simplify` - Reduce complexity without changing behavior
+- `Parallel coding session` - Multi-agent coordinated work
+
+Each task type should drive:
+- helper copy
+- example placeholder text
+- clarifying prompts
+- model recommendation weighting
+- compile template
+
+**10. Intent Stage Redesign**
+- Replace cleanup-centric copy with neutral task framing.
+- Use conditional examples by task type.
+
+**11. Clarification Model**
+Short-term approach (confirmed): staged follow-up prompts, one batch at a time.
+- Clarifying questions shown as staged follow-up prompts
+- One batch at a time
+- Not all downstream actions visible immediately
+- User can skip clarifying questions or request additional rounds
+- Free text option available for every question alongside structured options
+
+Long-term direction (not yet confirmed): conversational back-and-forth clarification. The ideal flow would be:
+- user submits intent
+- assistant asks follow-up
+- user replies
+- assistant asks again if needed
+- once stable, system recommends model
+
+Owner note: "Not sure about this" for the long-term conversational approach. Defer this decision.
+
+**12. Model Recommendation Stage**
+- Make recommendation the default path.
+- User override should be available but secondary.
+- Reduce the size of this section.
+- Keep model cards concise.
+- Add a detailed explanation so users can learn the strengths and weaknesses of various models, focusing on the clear differences in how the models best operate and when to use them:
+  - why recommended
+  - estimated scope
+  - expected reasoning load
+- Hide provider-specific prompt-format detail from this screen unless expanded.
+
+**13. Compile Stage**
+- This becomes the main payoff surface.
+- Layout:
+  - left: source summary
+  - right: compiled prompt
+- Optional tabs:
+  - Prompt
+  - Why this was generated
+  - Inputs used
+- Support iteration:
+  - revise intent (the prompt looks nothing like the original request)
+  - change model (user might need the same prompt for another model they have access to, as the first model became unavailable)
+  - regenerate (try again, this version did not work)
+  - save version (auto-saved with new version bump every time it is compiled anew)
+
+**14. Visual System Changes**
+- Introduce iconography for navigation and stage markers.
+- Make stage states explicit:
+  - not started
+  - active
+  - complete
+  - needs attention
+- Strengthen interaction feedback:
+  - hover
+  - pressed
+  - loading
+  - disabled
+  - selected
+  - complete
+- Use pastel colours to differentiate stage status; add one or two additional controlled colors for warning/attention/completion.
+- Install dark mode switcher and ensure colours adapt to dark and light themes. Use separate colour palettes for each theme. Tokenise all colours in the CSS file.
+
+**15. Copy Rewrite Priorities**
+Rewrite these first:
+- "Turn rough engineering asks into sharper prompt artifacts..."
+- "Keep intent, notes, and compiled state close..."
+- "Shape the request before you spend tokens"
+- "use clarification and model routing only where they add signal"
+- "Describe the mess plainly"
+- "without widening the blast radius"
+
+The replacement tone should be:
+- balanced or technical, with a short explanation after each piece of jargon (teaches the user the jargon while maintaining understanding)
+- literal
+- product-facing
+- conditional to the selected task type

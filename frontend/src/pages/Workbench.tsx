@@ -487,7 +487,10 @@ export function WorkbenchPage({
   // ── No projects state ──
   if (!loadingProjects && projects.length === 0) {
     return (
-      <section className="grid gap-6">
+      <section
+        className="grid gap-6 mx-auto w-full"
+        style={{ maxWidth: "1200px" }}
+      >
         <PageHeader />
         <section className="panel grid gap-4 p-6">
           <h3 className="section-title" style={{ fontSize: "1.45rem" }}>
@@ -511,7 +514,10 @@ export function WorkbenchPage({
 
   // ── Main render ──
   return (
-    <section className="grid gap-6">
+    <section
+      className="grid gap-6 mx-auto w-full"
+      style={{ maxWidth: "1200px" }}
+    >
       <PageHeader />
 
       {loadError && <p className="status-error">{loadError}</p>}

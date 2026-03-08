@@ -159,8 +159,8 @@
 }
 
 @theme {
-  --font-sans: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
-  --font-serif: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+  --font-sans: Inter, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: Inter, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "IBM Plex Mono", "SFMono-Regular", "SF Mono", monospace;
 
   --color-sand-50: #f4f7fb;
@@ -188,7 +188,8 @@
 
   body {
     margin: 0;
-    font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+    font-size: 1.0625rem;
+    font-family: Inter, "Helvetica Neue", Arial, sans-serif;
     color: var(--text-primary);
     background:
       radial-gradient(
@@ -215,6 +216,10 @@
 
   ::selection {
     background: var(--accent-selection);
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
   }
 }
 
@@ -293,6 +298,7 @@
   }
 
   .page-title {
+    font-family: Monaco, Menlo, "Courier New", monospace;
     font-size: clamp(2rem, 2.5vw, 2.75rem);
     line-height: 1.02;
     letter-spacing: -0.045em;
@@ -309,7 +315,8 @@
   }
 
   .section-title {
-    font-size: 1.125rem;
+    font-family: Monaco, Menlo, "Courier New", monospace;
+    font-size: 1.25rem;
     line-height: 1.35;
     font-weight: 600;
     color: var(--text-primary);
@@ -338,7 +345,7 @@
     border-radius: 0.95rem;
     background: var(--bg-muted);
     padding: 0.85rem 1rem;
-    font-size: 0.95rem;
+    font-size: 1rem;
     color: var(--text-primary);
     outline: none;
     transition:
@@ -354,8 +361,15 @@
 
   .field-textarea {
     min-height: 10rem;
+    max-height: 100vh;
     resize: vertical;
     line-height: 1.8;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  .field-textarea::-webkit-scrollbar {
+    display: none;
   }
 
   .field-input:focus,
@@ -373,7 +387,7 @@
     min-height: 2.9rem;
     border-radius: 0.95rem;
     padding: 0.7rem 1rem;
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 600;
     line-height: 1.1;
     transition:
@@ -393,13 +407,13 @@
   }
 
   .btn-primary {
-    background: var(--accent-primary);
-    color: var(--text-on-accent);
-    box-shadow: 0 12px 24px var(--accent-shadow);
+    background: #d97706;
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(217, 119, 6, 0.25);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: var(--accent-primary-hover);
+    background: #b45309;
   }
 
   .btn-dark {
@@ -504,7 +518,7 @@
     background: var(--bg-code);
     padding: 1.25rem;
     font-family: "IBM Plex Mono", "SFMono-Regular", "SF Mono", monospace;
-    font-size: 0.9rem;
+    font-size: 0.9375rem;
     line-height: 1.8;
     white-space: pre-wrap;
     color: var(--text-on-dark);
