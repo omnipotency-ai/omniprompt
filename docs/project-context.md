@@ -261,6 +261,11 @@ The owner specified these coding principles for all implementation:
 - Save progress (commit)
 - Frontend unit tests
 - Handoff doc
+- Backend fixes from Phase 1 audit:
+  - Share a single OpenAI client instance across clarifier/compiler/router (avoid recreating per call)
+  - Run harvester in a thread pool to avoid blocking the FastAPI event loop
+  - Tighten CORS allow_origin_regex to match only expected dev ports
+  - Sanitize OpenAI error messages before returning in HTTP responses (avoid leaking API key in auth errors)
 
 **Phase 3: End-to-End Flows**
 

@@ -97,6 +97,13 @@ The frontend currently uses the old `Workbench.tsx` (~907 lines) which reference
 
 **Phase 2 goal:** Progressive disclosure UI, proper navigation shell, stage gating, task type redesign, dark mode tokenized color palette.
 
+**Backend improvements to include in Phase 2** (from Phase 1 audit):
+
+- Share a single OpenAI client instance across clarifier/compiler/router (currently recreated per call, losing HTTP connection reuse)
+- Run harvester in a thread pool (`asyncio.to_thread`) to avoid blocking the FastAPI event loop during repo map generation
+- Tighten CORS `allow_origin_regex` to match only expected dev ports instead of any localhost port
+- Sanitize OpenAI error messages before returning in HTTP responses (currently forwards verbatim, risking API key leak in auth errors)
+
 ---
 
 ## Run commands
