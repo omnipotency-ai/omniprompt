@@ -43,7 +43,7 @@ export function SaveStage({
             type="text"
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
-            placeholder="Auto-derived from your intent"
+            placeholder="Auto-filled from your intent — edit if needed"
             className="field-input"
             disabled={disabled || loading}
           />

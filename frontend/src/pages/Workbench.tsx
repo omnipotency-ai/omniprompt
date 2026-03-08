@@ -80,6 +80,37 @@ function deriveSessionTitle(roughIntent: string, taskType: TaskType) {
   return `${humanizedTask} session`;
 }
 
+function deriveLibraryTitle(roughIntent: string, taskType: TaskType): string {
+  const intent = roughIntent.trim().replace(/\s+/g, " ");
+  if (intent) {
+    const firstSentence = intent.split(/[.!?]/)[0].trim();
+    return firstSentence.slice(0, 80);
+  }
+  return getTaskLabel(taskType);
+}
+
+function deriveVersionLabel(
+  compiledVersions: CompiledVersion[],
+  baseVersionLabel: string | null,
+): string {
+  if (!baseVersionLabel || compiledVersions.length === 0) {
+    // Fresh compile — integer bump
+    const majorCount = compiledVersions.filter((v) =>
+      /^\d+\.0$/.test(v.version_label),
+    ).length;
+    return `${majorCount + 1}.0`;
+  }
+  // Iteration — decimal bump off the base
+  const baseMajor = baseVersionLabel.split(".")[0];
+  const decimalVersions = compiledVersions.filter(
+    (v) =>
+      v.version_label.startsWith(`${baseMajor}.`) &&
+      v.version_label !== `${baseMajor}.0`,
+  );
+  const nextDecimal = decimalVersions.length + 1;
+  return `${baseMajor}.${String(nextDecimal).padStart(2, "0")}`;
+}
+
 function collectAnswers(
   questions: ClarifyResponse["questions"],
   answerMap: Record<string, string>,
@@ -121,6 +152,10 @@ export function WorkbenchPage({
     [],
   );
   const [latestCompiledPrompt, setLatestCompiledPrompt] = useState("");
+  // null = fresh compile; string = label of the version being iterated from
+  const [iterateFromVersionLabel, setIterateFromVersionLabel] = useState<
+    string | null
+  >(null);
 
   // ── Save fields ──
   const [libraryTitle, setLibraryTitle] = useState("");
@@ -270,6 +305,7 @@ export function WorkbenchPage({
         case "compile":
           setCompiledVersions([]);
           setLatestCompiledPrompt("");
+          setIterateFromVersionLabel(null);
           break;
         case "save":
           setLibraryTitle("");
@@ -464,16 +500,25 @@ export function WorkbenchPage({
 
       setLatestCompiledPrompt(response.compiled_prompt);
 
+      // Derive the label against the current snapshot of compiledVersions.
+      // This is safe because handleCompileRequest is never called concurrently.
+      const versionLabel = deriveVersionLabel(
+        compiledVersions,
+        iterateFromVersionLabel,
+      );
       const version: CompiledVersion = {
         id: crypto.randomUUID(),
-        version_label: `${compiledVersions.length + 1}.0`,
+        version_label: versionLabel,
         compiled_prompt: response.compiled_prompt,
         target_model: response.target_model,
         project_context_used: response.project_context_used,
         created_at: new Date().toISOString(),
       };
       setCompiledVersions((prev) => [...prev, version]);
-      setLibraryTitle(deriveSessionTitle(roughIntent, taskType));
+
+      // After a fresh compile, reset iterate-from so any subsequent
+      // Regenerate also starts from scratch unless explicitly set.
+      setIterateFromVersionLabel(null);
 
       void autosaveSession({ append_compiled_version: version });
     } catch (err) {
@@ -487,6 +532,11 @@ export function WorkbenchPage({
 
   function handleCompileContinue() {
     void autosaveSession();
+    // Auto-populate library title from intent when first entering the save
+    // stage, but never overwrite text the user has already typed.
+    setLibraryTitle((prev) =>
+      prev.trim() ? prev : deriveLibraryTitle(roughIntent, taskType),
+    );
     goToStage("save");
   }
 
@@ -522,7 +572,7 @@ export function WorkbenchPage({
         }),
         effectiveness_rating: effectivenessRating,
       });
-      setSaveMessage("Prompt saved to the library.");
+      setSaveMessage("Saved to library.");
     } catch (err) {
       setErrorMessage(
         err instanceof Error ? err.message : "Failed to save the prompt.",
