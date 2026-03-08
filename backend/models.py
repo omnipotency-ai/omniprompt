@@ -247,7 +247,7 @@ class PromptCreateRequest(ApiModel):
 class ClarifyRequest(ApiModel):
     project_id: str | None = Field(default=None, min_length=1)
     task_type: TaskType
-    rough_intent: str = Field(min_length=1)
+    rough_intent: str = Field(min_length=1, max_length=4000)
 
 
 class ClarifyResponse(ApiModel):
@@ -259,7 +259,7 @@ class ClarifyResponse(ApiModel):
 class RouteRequest(ApiModel):
     project_id: str | None = Field(default=None, min_length=1)
     task_type: TaskType
-    rough_intent: str = Field(min_length=1)
+    rough_intent: str = Field(min_length=1, max_length=4000)
     answers: list[ClarifyingAnswer] = Field(default_factory=list)
 
 
@@ -275,7 +275,7 @@ class RouteResponse(ApiModel):
 class CompileRequest(ApiModel):
     project_id: str | None = Field(default=None, min_length=1)
     task_type: TaskType
-    rough_intent: str = Field(min_length=1)
+    rough_intent: str = Field(min_length=1, max_length=4000)
     answers: list[ClarifyingAnswer] = Field(default_factory=list)
     target_model: ModelChoice
 
@@ -289,7 +289,7 @@ class CompileResponse(ApiModel):
 
 class ReformulateRequest(ApiModel):
     task_type: TaskType
-    rough_intent: str = Field(min_length=1)
+    rough_intent: str = Field(min_length=1, max_length=4000)
     project_id: str | None = None
 
 
