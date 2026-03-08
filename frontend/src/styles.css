@@ -248,7 +248,7 @@
   }
 
   .nav-item-active {
-    border-color: rgba(47, 91, 209, 0.2);
+    border-color: var(--accent-muted);
     background: var(--bg-surface-hover);
     box-shadow: 0 10px 20px var(--shadow-md);
   }
