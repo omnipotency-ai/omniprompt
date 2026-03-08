@@ -16,5 +16,23 @@
     "created_at": "2026-03-08T15:24:12.931783Z",
     "updated_at": "2026-03-08T15:24:20.948978Z",
     "last_mapped_at": "2026-03-08T15:24:20.948978Z"
+  },
+  {
+    "id": "5c0e023e-74a3-4875-9a0b-d90c772599db",
+    "name": "FinTek aka omniBucks",
+    "path": "/Users/peterjamesblizzard/projects/fintek",
+    "repo_map_path": "/Users/peterjamesblizzard/projects/_prompt_os/data/maps/5c0e023e-74a3-4875-9a0b-d90c772599db.json",
+    "created_at": "2026-03-08T16:09:03.769661Z",
+    "updated_at": "2026-03-08T16:09:07.367197Z",
+    "last_mapped_at": "2026-03-08T16:09:07.367197Z"
+  },
+  {
+    "id": "9d73e033-7359-4b64-9cc0-f11abe2a35ca",
+    "name": "omniFlow",
+    "path": "/Users/peterjamesblizzard/projects/omniFlow",
+    "repo_map_path": "/Users/peterjamesblizzard/projects/_prompt_os/data/maps/9d73e033-7359-4b64-9cc0-f11abe2a35ca.json",
+    "created_at": "2026-03-08T16:09:32.037637Z",
+    "updated_at": "2026-03-08T16:09:34.961179Z",
+    "last_mapped_at": "2026-03-08T16:09:34.961179Z"
   }
 ]
