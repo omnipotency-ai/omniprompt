@@ -287,6 +287,17 @@ class CompileResponse(ApiModel):
     project_context_used: bool
 
 
+class ReformulateRequest(ApiModel):
+    task_type: TaskType
+    rough_intent: str = Field(min_length=1)
+    project_id: str | None = None
+
+
+class ReformulateResponse(ApiModel):
+    original_intent: str
+    reformulated_intent: str
+
+
 Session.model_rebuild()
 SessionCreateRequest.model_rebuild()
 SessionUpdateRequest.model_rebuild()

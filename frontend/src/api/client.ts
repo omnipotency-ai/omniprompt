@@ -8,6 +8,8 @@ import type {
   Project,
   ProjectCreateRequest,
   ProjectMapResponse,
+  ReformulateRequest,
+  ReformulateResponse,
   RouteRequest,
   RouteResponse,
   Session,
@@ -88,6 +90,15 @@ export function refreshProjectMap(
 ): Promise<ProjectMapResponse> {
   return request<ProjectMapResponse>(`/api/projects/${projectId}/map`, {
     method: "POST",
+  });
+}
+
+export function reformulateIntent(
+  input: ReformulateRequest,
+): Promise<ReformulateResponse> {
+  return request<ReformulateResponse>("/api/reformulate", {
+    method: "POST",
+    body: input,
   });
 }
 

@@ -29,6 +29,8 @@ try:
         Project,
         ProjectCreateRequest,
         ProjectMapResponse,
+        ReformulateRequest,
+        ReformulateResponse,
         RepoMap,
         RouteRequest,
         RouteResponse,
@@ -36,6 +38,7 @@ try:
         SessionCreateRequest,
         SessionUpdateRequest,
     )
+    from backend.reformulator import reformulate
     from backend.router import recommend_model
 except ModuleNotFoundError:
     from clarifier import generate_clarifying_questions
@@ -52,6 +55,8 @@ except ModuleNotFoundError:
         Project,
         ProjectCreateRequest,
         ProjectMapResponse,
+        ReformulateRequest,
+        ReformulateResponse,
         RepoMap,
         RouteRequest,
         RouteResponse,
@@ -59,6 +64,7 @@ except ModuleNotFoundError:
         SessionCreateRequest,
         SessionUpdateRequest,
     )
+    from reformulator import reformulate
     from router import recommend_model
 
 APP_DIR = Path(__file__).resolve().parent
@@ -233,6 +239,18 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def startup() -> None:
         ensure_storage()
+
+    @app.post("/api/reformulate", response_model=ReformulateResponse)
+    async def reformulate_intent(payload: ReformulateRequest) -> ReformulateResponse:
+        repo_map = _load_repo_map(project_registry, payload.project_id)
+        try:
+            return reformulate(
+                task_type=payload.task_type,
+                rough_intent=payload.rough_intent,
+                repo_map_summary=repo_map.summary if repo_map else None,
+            )
+        except RuntimeError as exc:
+            raise _to_ai_http_exception(exc) from exc
 
     @app.post("/api/clarify", response_model=ClarifyResponse)
     async def clarify_intent(payload: ClarifyRequest) -> ClarifyResponse:

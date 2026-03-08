@@ -5,6 +5,7 @@ import {
   compilePrompt,
   createSession,
   listProjects,
+  reformulateIntent as reformulateIntentApi,
   routeModel,
   savePromptToLibrary,
   updateSession,
@@ -312,6 +313,16 @@ export function WorkbenchPage({
     void autosaveSession();
   }
 
+  async function handleReformulateIntent(intentText: string): Promise<string> {
+    const result = await reformulateIntentApi({
+      task_type: taskType,
+      rough_intent: intentText,
+      ...(selectedProjectId && { project_id: selectedProjectId }),
+    });
+    void autosaveSession({ reformulated_intent: result.reformulated_intent });
+    return result.reformulated_intent;
+  }
+
   function handleIntentContinue() {
     // Go to clarify: kick off clarification API call
     goToStage("clarify");
@@ -559,6 +570,7 @@ export function WorkbenchPage({
             onIntentChange={setRoughIntent}
             onContinue={handleIntentContinue}
             onSkipToModel={handleIntentSkipToModel}
+            reformulateIntent={handleReformulateIntent}
             disabled={busyAction !== null}
           />
         </WorkflowStage>
