@@ -1,4 +1,23 @@
-**Plan**
+**Plan** (revised by owner 2026-03-08)
+
+**Implementation Status (as of 2026-03-08):**
+- Sections 1-3 (Product Direction, Core UX Problems, ADHD-Friendly Principles): Implemented in Phase 2
+- Section 4 (Information Architecture): Implemented — global header, left sidebar nav, workbench body
+- Section 5 (Proposed Workbench Structure): Implemented — 6-stage progressive disclosure workflow
+- Section 6 (Progressive Disclosure Rules): Implemented — stage gating, collapsible summaries
+- Section 7 (Navigation + Shell Plan): Implemented — proper header, icon nav, session in sidebar
+- Section 8 (Session Strategy): Partially done — draft/session distinction exists, restore not wired
+- Section 9 (Task Type Redesign): Implemented — FAQ accordion, task-type-conditional copy
+- Section 10 (Intent Stage Redesign): Implemented — conditional hints, plain language
+- Section 11 (Clarification Model): Implemented — multi-round staged prompts with skip option
+- Section 12 (Model Recommendation): Implemented — compact display, collapsible reasoning, override
+- Section 13 (Compile Stage): Implemented — payoff surface, version history, iteration controls
+- Section 14 (Visual System): Partially done — CSS tokens + dark mode exist, but Library/Projects pages need tokenizing
+- Section 15 (Copy Rewrite): Implemented — all jargon replaced
+- Remaining for Phase 3: intent reformulation (5.b-c), autosave, draft restore, decimal versioning, Playwright E2E
+
+---
+
 The coherent direction is to turn this from a "dashboard of cards" into a guided workspace with progressive disclosure, clearer semantics, and less cognitive branching.
 
 **1. Product Direction**
