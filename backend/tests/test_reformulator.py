@@ -9,7 +9,6 @@ from fastapi.testclient import TestClient
 
 import backend.reformulator as reformulator_mod
 from backend.main import app
-from backend.reformulator import reformulate
 
 
 # ---------------------------------------------------------------------------
@@ -26,7 +25,7 @@ class TestReformulateRaisesOnClientFailure:
 
         with patch.object(reformulator_mod, "get_client", return_value=mock_client):
             with pytest.raises(RuntimeError, match="OpenAI reformulate request failed"):
-                reformulate(
+                reformulator_mod.reformulate(
                     task_type="refactor",
                     rough_intent="Fix the mess in the components folder",
                 )
@@ -44,7 +43,7 @@ class TestReformulateRaisesOnMissingStructuredOutput:
 
         with patch.object(reformulator_mod, "get_client", return_value=mock_client):
             with pytest.raises(RuntimeError, match="no structured output"):
-                reformulate(
+                reformulator_mod.reformulate(
                     task_type="implement",
                     rough_intent="Add a close button to the modal",
                 )
