@@ -216,7 +216,48 @@ export function WorkbenchPage({
   }
 
   // ── Navigate stages ──
+
+  function resetDownstreamState(stage: WorkflowStageId) {
+    const targetIndex = STAGE_ORDER.indexOf(stage);
+    const stagesToClear = STAGE_ORDER.slice(targetIndex + 1);
+
+    for (const s of stagesToClear) {
+      switch (s) {
+        case "intent":
+          setRoughIntent("");
+          break;
+        case "clarify":
+          setClarifyRounds([]);
+          setCurrentClarifyResult(null);
+          setAnswersByQuestionId({});
+          break;
+        case "model":
+          setRouteResult(null);
+          setSelectedModel(getDefaultModelForTask(taskType));
+          break;
+        case "compile":
+          setCompiledVersions([]);
+          setLatestCompiledPrompt("");
+          break;
+        case "save":
+          setLibraryTitle("");
+          setExpectedResultAssessment("");
+          setEffectivenessRating(5);
+          setSaveMessage(null);
+          break;
+      }
+    }
+  }
+
   function goToStage(stage: WorkflowStageId) {
+    const targetIndex = STAGE_ORDER.indexOf(stage);
+    const currentIndex = STAGE_ORDER.indexOf(currentStage);
+
+    // If navigating backwards, clear downstream state
+    if (targetIndex < currentIndex) {
+      resetDownstreamState(stage);
+    }
+
     setCurrentStage(stage);
     setErrorMessage(null);
     setSaveMessage(null);
@@ -244,6 +285,24 @@ export function WorkbenchPage({
     } catch {
       // Autosave failures are non-blocking
     }
+  }
+
+  // ── Stage helpers ──
+
+  function archiveCurrentRound() {
+    if (currentClarifyResult && currentClarifyResult.questions.length > 0) {
+      const round: ClarifyRound = {
+        id: crypto.randomUUID(),
+        round_number: clarifyRounds.length + 1,
+        questions: currentClarifyResult.questions,
+        answers: allAnswers,
+        created_at: new Date().toISOString(),
+      };
+      setClarifyRounds((prev) => [...prev, round]);
+      void autosaveSession({ append_clarify_round: round });
+    }
+    setCurrentClarifyResult(null);
+    setAnswersByQuestionId({});
   }
 
   // ── Stage handlers ──
@@ -287,22 +346,7 @@ export function WorkbenchPage({
   }
 
   function handleClarifySubmitAndContinue() {
-    // Archive current round
-    if (currentClarifyResult && currentClarifyResult.questions.length > 0) {
-      const round: ClarifyRound = {
-        id: crypto.randomUUID(),
-        round_number: clarifyRounds.length + 1,
-        questions: currentClarifyResult.questions,
-        answers: allAnswers,
-        created_at: new Date().toISOString(),
-      };
-      setClarifyRounds((prev) => [...prev, round]);
-      void autosaveSession({ append_clarify_round: round });
-    }
-    setCurrentClarifyResult(null);
-    setAnswersByQuestionId({});
-
-    // Move to model stage
+    archiveCurrentRound();
     goToStage("model");
     setBusyAction("route");
     void handleRouteRequest();
@@ -317,20 +361,7 @@ export function WorkbenchPage({
   }
 
   function handleClarifyAnotherRound() {
-    // Archive current round first
-    if (currentClarifyResult && currentClarifyResult.questions.length > 0) {
-      const round: ClarifyRound = {
-        id: crypto.randomUUID(),
-        round_number: clarifyRounds.length + 1,
-        questions: currentClarifyResult.questions,
-        answers: allAnswers,
-        created_at: new Date().toISOString(),
-      };
-      setClarifyRounds((prev) => [...prev, round]);
-      void autosaveSession({ append_clarify_round: round });
-    }
-    setCurrentClarifyResult(null);
-    setAnswersByQuestionId({});
+    archiveCurrentRound();
     void handleClarifyRequest();
   }
 

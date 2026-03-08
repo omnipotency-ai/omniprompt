@@ -21,6 +21,7 @@ export function WorkflowStage({
 }: WorkflowStageProps) {
   const isExpanded = status === "active";
   const canToggle = status === "complete" && onToggle;
+  const contentId = `workflow-stage-${stageNumber}-content`;
 
   return (
     <section
@@ -54,6 +55,8 @@ export function WorkflowStage({
         type="button"
         onClick={canToggle ? onToggle : undefined}
         disabled={!canToggle}
+        aria-expanded={isExpanded}
+        aria-controls={contentId}
         className="flex w-full items-center gap-3 px-5 py-4 text-left"
         style={{
           cursor: canToggle ? "pointer" : "default",
@@ -118,6 +121,9 @@ export function WorkflowStage({
       {/* Content area */}
       {isExpanded && (
         <div
+          id={contentId}
+          role="region"
+          aria-labelledby={`workflow-stage-${stageNumber}-header`}
           className="px-5 pb-5"
           style={{
             borderTop: "1px solid var(--border-default)",

@@ -1,10 +1,6 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import type {
-  ClarifyingQuestion,
-  ClarifyingAnswer,
-  ClarifyRound,
-} from "../../types";
+import type { ClarifyingQuestion, ClarifyRound } from "../../types";
 
 interface ClarifyStageProps {
   rounds: ClarifyRound[];
