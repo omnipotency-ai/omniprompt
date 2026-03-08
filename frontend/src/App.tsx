@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { Wrench, BookOpen, FolderGit2, type LucideIcon } from "lucide-react";
+import {
+  Wrench,
+  BookOpen,
+  FolderGit2,
+  ChevronDown,
+  type LucideIcon,
+} from "lucide-react";
 
 import { ThemeSwitcher } from "./components/ThemeSwitcher";
 import { LibraryPage } from "./pages/Library";
@@ -92,13 +98,8 @@ export default function App() {
             })}
           </nav>
 
-          {/* Draft / session placeholder */}
-          <div className="grid gap-1.5">
-            <p className="eyebrow">Session</p>
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              No active session
-            </p>
-          </div>
+          {/* Draft / session placeholder (collapsible) */}
+          <SessionSection />
         </aside>
 
         {/* ── Main content ── */}
@@ -120,6 +121,36 @@ export default function App() {
           )}
         </main>
       </div>
+    </div>
+  );
+}
+
+function SessionSection() {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <div className="grid gap-1">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex items-center gap-1.5 py-1 text-left"
+      >
+        <ChevronDown
+          size={14}
+          aria-hidden
+          className="transition-transform duration-150"
+          style={{
+            color: "var(--text-muted)",
+            transform: open ? "rotate(0deg)" : "rotate(-90deg)",
+          }}
+        />
+        <span className="eyebrow">Session</span>
+      </button>
+      {open && (
+        <p className="pl-5 text-sm" style={{ color: "var(--text-muted)" }}>
+          No active session
+        </p>
+      )}
     </div>
   );
 }

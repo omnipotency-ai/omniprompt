@@ -219,15 +219,6 @@
 }
 
 @layer components {
-  .app-sidebar {
-    border: 1px solid var(--border-default);
-    border-radius: 1.5rem;
-    background: var(--bg-surface);
-    padding: 1.25rem;
-    box-shadow: 0 24px 60px var(--shadow-lg);
-    backdrop-filter: blur(18px);
-  }
-
   .nav-item {
     display: grid;
     gap: 0.25rem;
