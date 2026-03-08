@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import os
-
-from openai import OpenAI
 from pydantic import BaseModel, Field
 
 try:
@@ -13,6 +10,7 @@ try:
         RouteResponse,
         TaskType,
     )
+    from backend.openai_client import get_client
     from backend.prompts.router_system import (
         MODEL_ROUTING_GUIDANCE,
         ROUTER_SYSTEM_PROMPT,
@@ -26,6 +24,7 @@ except ModuleNotFoundError:
         RouteResponse,
         TaskType,
     )
+    from openai_client import get_client
     from prompts.router_system import (
         MODEL_ROUTING_GUIDANCE,
         ROUTER_SYSTEM_PROMPT,
@@ -48,7 +47,7 @@ def recommend_model(
     answers: list[ClarifyingAnswer],
     repo_map_summary: str | None = None,
 ) -> RouteResponse:
-    client = _build_client()
+    client = get_client()
     try:
         response = client.responses.parse(
             model=ROUTER_MODEL,
@@ -74,13 +73,6 @@ def recommend_model(
         budget_alternative=parsed.budget_alternative,
         advisory_only=True,
     )
-
-
-def _build_client() -> OpenAI:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not configured.")
-    return OpenAI(api_key=api_key)
 
 
 def _build_router_prompt(

@@ -1,0 +1,24 @@
+"""Shared OpenAI client instance for HTTP connection reuse."""
+
+from __future__ import annotations
+
+import os
+
+from openai import OpenAI
+
+
+def get_client() -> OpenAI:
+    """Return a module-level OpenAI client, creating it on first call.
+
+    Raises RuntimeError if OPENAI_API_KEY is not set.
+    """
+    global _client
+    if _client is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENAI_API_KEY is not configured.")
+        _client = OpenAI(api_key=api_key)
+    return _client
+
+
+_client: OpenAI | None = None

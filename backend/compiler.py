@@ -6,6 +6,7 @@ from openai import OpenAI
 
 try:
     from backend.models import ClarifyingAnswer, CompileResponse, ModelChoice, TaskType
+    from backend.openai_client import get_client
     from backend.prompts.compiler_system import (
         COMPILER_SYSTEM_PROMPT,
         get_model_compilation_guidance,
@@ -14,6 +15,7 @@ try:
     )
 except ModuleNotFoundError:
     from models import ClarifyingAnswer, CompileResponse, ModelChoice, TaskType
+    from openai_client import get_client
     from prompts.compiler_system import (
         COMPILER_SYSTEM_PROMPT,
         get_model_compilation_guidance,
@@ -52,7 +54,7 @@ def generate_compiled_prompt(
     target_model: ModelChoice,
     repo_map_summary: str | None = None,
 ) -> CompileResponse:
-    client = _build_client()
+    client = get_client()
     try:
         compiler_input = _build_compiler_prompt(
             task_type=task_type,
@@ -95,13 +97,6 @@ def generate_compiled_prompt(
         compiled_prompt=compiled_prompt,
         project_context_used=bool(repo_map_summary),
     )
-
-
-def _build_client() -> OpenAI:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not configured.")
-    return OpenAI(api_key=api_key)
 
 
 def _request_compiled_prompt(

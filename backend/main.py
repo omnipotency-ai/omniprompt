@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from json import JSONDecodeError
@@ -224,7 +226,6 @@ def create_app() -> FastAPI:
             "http://localhost:5173",
             "http://127.0.0.1:5173",
         ],
-        allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -317,7 +318,8 @@ def create_app() -> FastAPI:
                 detail=f"Project '{project_id}' was not found.",
             )
 
-        repo_map = harvest_project(
+        repo_map = await asyncio.to_thread(
+            harvest_project,
             project_id=project.id,
             project_name=project.name,
             project_path=Path(project.path),
@@ -564,12 +566,21 @@ def _load_repo_map(
 
 def _to_ai_http_exception(exc: RuntimeError) -> HTTPException:
     message = str(exc)
-    status_code = (
-        status.HTTP_503_SERVICE_UNAVAILABLE
-        if "OPENAI_API_KEY" in message
-        else status.HTTP_502_BAD_GATEWAY
+
+    # Authentication / API key errors: return generic message, never leak keys.
+    if "OPENAI_API_KEY" in message or "api_key" in message.lower():
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI service authentication is not configured or has failed.",
+        )
+
+    # Strip anything that looks like an API key (sk-... tokens).
+    sanitized = re.sub(r"sk-[A-Za-z0-9_-]{20,}", "[REDACTED]", message)
+
+    return HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail=sanitized,
     )
-    return HTTPException(status_code=status_code, detail=message)
 
 
 def _utc_now() -> datetime:
