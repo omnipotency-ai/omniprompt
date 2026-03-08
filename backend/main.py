@@ -21,6 +21,7 @@ try:
         ClarifyResponse,
         CompileRequest,
         CompileResponse,
+        CompiledVersion,
         Prompt,
         PromptCreateRequest,
         Project,
@@ -31,7 +32,6 @@ try:
         RouteResponse,
         Session,
         SessionCreateRequest,
-        SessionNote,
         SessionUpdateRequest,
     )
     from backend.router import recommend_model
@@ -44,6 +44,7 @@ except ModuleNotFoundError:
         ClarifyResponse,
         CompileRequest,
         CompileResponse,
+        CompiledVersion,
         Prompt,
         PromptCreateRequest,
         Project,
@@ -54,7 +55,6 @@ except ModuleNotFoundError:
         RouteResponse,
         Session,
         SessionCreateRequest,
-        SessionNote,
         SessionUpdateRequest,
     )
     from router import recommend_model
@@ -182,7 +182,7 @@ class SessionStore:
 
     def latest_open(self) -> Session | None:
         for session in self.list():
-            if session.status == "open":
+            if session.status in ("draft", "open"):
                 return session
         return None
 
@@ -213,7 +213,7 @@ def create_app() -> FastAPI:
     project_registry = ProjectRegistry(PROJECTS_FILE, ensure_storage)
     prompt_library = PromptLibraryStore(LIBRARY_DIR, ensure_storage)
     session_store = SessionStore(SESSIONS_DIR, ensure_storage)
-    app = FastAPI(title="Prompt OS API", version="0.1.0")
+    app = FastAPI(title="Prompt OS API", version="0.2.0")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
@@ -360,11 +360,12 @@ def create_app() -> FastAPI:
             project_id=payload.project_id,
             task_type=payload.task_type,
             session_id=payload.session_id,
+            compiled_version_id=payload.compiled_version_id,
             title=payload.title,
             rough_intent=payload.rough_intent,
             compiled_prompt=payload.compiled_prompt,
             target_model=payload.target_model,
-            why_it_works=payload.why_it_works,
+            expected_result_assessment=payload.expected_result_assessment,
             effectiveness_rating=payload.effectiveness_rating,
             created_at=_utc_now(),
         )
@@ -377,6 +378,16 @@ def create_app() -> FastAPI:
     @app.get("/api/sessions/latest", response_model=Session | None)
     async def latest_session() -> Session | None:
         return session_store.latest_open()
+
+    @app.get("/api/sessions/{session_id}", response_model=Session)
+    async def get_session(session_id: str) -> Session:
+        session = session_store.get(session_id)
+        if session is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Session '{session_id}' was not found.",
+            )
+        return session
 
     @app.post(
         "/api/sessions",
@@ -397,12 +408,7 @@ def create_app() -> FastAPI:
             task_type=payload.task_type,
             title=payload.title or _derive_session_title(payload.rough_intent, payload.task_type),
             rough_intent=payload.rough_intent,
-            clarifying_questions=payload.clarifying_questions,
-            clarifying_answers=payload.clarifying_answers,
-            route_result=payload.route_result,
-            compile_result=payload.compile_result,
             status=payload.status,
-            notes=[],
             created_at=timestamp,
             updated_at=timestamp,
         )
@@ -422,15 +428,13 @@ def create_app() -> FastAPI:
                 detail=f"Project '{payload.project_id}' was not found.",
             )
 
-        notes = list(existing_session.notes)
-        if payload.note_body:
-            notes.append(
-                SessionNote(
-                    id=str(uuid.uuid4()),
-                    body=payload.note_body,
-                    created_at=_utc_now(),
-                )
-            )
+        clarify_rounds = list(existing_session.clarify_rounds)
+        if payload.append_clarify_round is not None:
+            clarify_rounds.append(payload.append_clarify_round)
+
+        compiled_versions = list(existing_session.compiled_versions)
+        if payload.append_compiled_version is not None:
+            compiled_versions.append(payload.append_compiled_version)
 
         updated_session = existing_session.model_copy(
             update={
@@ -446,22 +450,20 @@ def create_app() -> FastAPI:
                 "rough_intent": payload.rough_intent
                 if "rough_intent" in payload.model_fields_set
                 else existing_session.rough_intent,
-                "clarifying_questions": payload.clarifying_questions
-                if "clarifying_questions" in payload.model_fields_set
-                else existing_session.clarifying_questions,
-                "clarifying_answers": payload.clarifying_answers
-                if "clarifying_answers" in payload.model_fields_set
-                else existing_session.clarifying_answers,
+                "reformulated_intent": payload.reformulated_intent
+                if "reformulated_intent" in payload.model_fields_set
+                else existing_session.reformulated_intent,
+                "selected_model": payload.selected_model
+                if "selected_model" in payload.model_fields_set
+                else existing_session.selected_model,
+                "clarify_rounds": clarify_rounds,
                 "route_result": payload.route_result
                 if "route_result" in payload.model_fields_set
                 else existing_session.route_result,
-                "compile_result": payload.compile_result
-                if "compile_result" in payload.model_fields_set
-                else existing_session.compile_result,
+                "compiled_versions": compiled_versions,
                 "status": payload.status
                 if "status" in payload.model_fields_set
                 else existing_session.status,
-                "notes": notes,
                 "updated_at": _utc_now(),
             }
         )
