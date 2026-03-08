@@ -556,7 +556,7 @@ export function WorkbenchPage({
 
     if (session.compiled_versions.length > 0) {
       setCurrentStage("compile");
-    } else if (session.selected_model && session.clarify_rounds.length > 0) {
+    } else if (session.selected_model) {
       setCurrentStage("model");
     } else if (session.clarify_rounds.length > 0) {
       setCurrentStage("clarify");
