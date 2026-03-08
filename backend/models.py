@@ -294,8 +294,8 @@ class ReformulateRequest(ApiModel):
 
 
 class ReformulateResponse(ApiModel):
-    original_intent: str
-    reformulated_intent: str
+    original_intent: str = Field(min_length=1)
+    reformulated_intent: str = Field(min_length=1)
 
 
 Session.model_rebuild()

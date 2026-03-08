@@ -167,7 +167,7 @@ export function IntentStage({
 
       {/* Inline error */}
       {reformulateError && (
-        <p className="text-sm" style={{ color: "var(--color-error, #e53e3e)" }}>
+        <p className="text-sm" style={{ color: "var(--status-error)" }}>
           {reformulateError}
         </p>
       )}
